@@ -1,0 +1,7 @@
+# Full-resolution source images (34MB) - only the optimized versions in
+# matcha-pictures/web/ are actually used by the site.
+matcha-pictures/*.png
+
+# OS cruft
+.DS_Store
+Thumbs.db

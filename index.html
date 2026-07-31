@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Matcha Maps — Singapore's Best Matcha, Found.</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Every matcha cafe and bowl in Singapore, tasted, rated, and mapped so you never waste a sip.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..600&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <span class="topbar-item"><span class="dot"></span>matchamaps.sg</span>
+  <span class="topbar-item"><span class="dot"></span>hello@matchamaps.sg</span>
+  <span class="topbar-item"><span class="dot"></span>Singapore</span>
+</header>
+
+<main class="frame">
+
+  <canvas class="bg-grid" id="bgGrid" aria-hidden="true"></canvas>
+
+  <div class="photo-scatter" aria-hidden="true">
+    <div class="photo-tile tile-cream" style="--rot:-6deg; width:96px; height:96px; top:66px; left:860px;">
+      <img src="matcha-pictures/web/matcha_2.png" alt="">
+    </div>
+    <div class="photo-tile tile-sage" style="--rot:5deg; width:76px; height:76px; top:36px; left:1000px;">
+      <img src="matcha-pictures/web/matcha_20.png" alt="">
+    </div>
+    <div class="photo-tile tile-butter" style="--rot:4deg; width:84px; height:84px; top:238px; left:944px;">
+      <img src="matcha-pictures/web/matcha_10.png" alt="">
+    </div>
+    <div class="photo-tile tile-periwinkle" style="--rot:-4deg; width:78px; height:78px; top:430px; left:872px;">
+      <img src="matcha-pictures/web/matcha_16.png" alt="">
+    </div>
+    <div class="photo-tile tile-rose" style="--rot:6deg; width:90px; height:90px; top:660px; left:520px;">
+      <img src="matcha-pictures/web/matcha_8.png" alt="">
+    </div>
+    <div class="photo-tile tile-periwinkle" style="--rot:-5deg; width:74px; height:74px; top:772px; left:640px;">
+      <img src="matcha-pictures/web/matcha_4.png" alt="">
+    </div>
+    <div class="photo-tile tile-sage" style="--rot:3deg; width:82px; height:82px; top:706px; left:780px;">
+      <img src="matcha-pictures/web/matcha_13.png" alt="">
+    </div>
+    <div class="photo-tile tile-butter" style="--rot:-6deg; width:70px; height:70px; top:790px; left:888px;">
+      <img src="matcha-pictures/web/matcha_17.png" alt="">
+    </div>
+    <div class="photo-tile tile-cream" style="--rot:5deg; width:76px; height:76px; top:678px; left:392px;">
+      <img src="matcha-pictures/web/matcha_1.png" alt="">
+    </div>
+    <div class="photo-tile tile-rose" style="--rot:-4deg; width:80px; height:80px; top:60px; left:1090px;">
+      <img src="matcha-pictures/web/matcha_19.png" alt="">
+    </div>
+  </div>
+
+  <nav class="nav">
+    <a href="#" class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Matcha Maps</span>
+    </a>
+
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navLinks" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <div class="nav-links" id="navLinks">
+      <a href="#">Cafes</a>
+      <a href="#">Rankings</a>
+      <a href="#">Reviews</a>
+    </div>
+
+    <button class="btn btn-primary nav-cta">Explore Map</button>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-copy">
+      <h1 class="headline">
+        Singapore's<br>
+        <span class="headline-dim">Best Matcha,</span><br>
+        Found.
+      </h1>
+      <p class="lede">
+        The best matcha guaranteed — every cafe and bowl in Singapore, tasted, rated, and mapped so you never waste a sip.
+      </p>
+      <div class="stats">
+        <span>★ 4.8 average rating</span>
+        <span class="stat-sep" aria-hidden="true"></span>
+        <span>120+ cafes reviewed</span>
+      </div>
+    </div>
+
+    <div class="pour-panel" role="img" aria-label="Animated matcha pour illustration, coming soon">
+      <div class="pour-anim">
+        <div class="pour-stream"></div>
+        <div class="pour-bowl"></div>
+      </div>
+      <span class="pour-label">animated matcha pour<br>coming soon</span>
+    </div>
+  </div>
+
+  <article class="rank-card">
+    <div class="rank-card-top">
+      <span class="rank-badge">#1 Ranked</span>
+      <span class="rank-area">Tiong Bahru</span>
+    </div>
+    <h3 class="rank-name">Enishi Matcha House</h3>
+    <div class="rank-rating">
+      <span class="stars" aria-hidden="true">★★★★★</span>
+      <span class="rank-count">4.9 · 340 reviews</span>
+    </div>
+    <div class="rank-footer">
+      <div>
+        <div class="rank-label">Signature</div>
+        <div class="rank-dish">Ceremonial Koicha</div>
+      </div>
+      <button class="btn btn-primary">View</button>
+    </div>
+  </article>
+
+</main>
+
+<script src="shape-grid.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,19 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { Shop } from "@/lib/types";
+import { MapMarkerPopup } from "@/components/map/MapMarkerPopup";
+import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
 import "leaflet/dist/leaflet.css";
 
 const SINGAPORE_CENTER: [number, number] = [1.3521, 103.8198];
 
-const markerIcon = L.divIcon({
-  className: "matcha-marker",
-  html: '<span class="matcha-marker-dot"></span>',
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-});
+function createMarkerIcon(saved: boolean) {
+  return L.divIcon({
+    className: `matcha-marker${saved ? " matcha-marker--saved" : ""}`,
+    html: '<span class="matcha-marker-dot"></span>',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+  });
+}
 
 function FlyToSelected({ shop }: { shop: Shop | null }) {
   const map = useMap();
@@ -33,7 +37,17 @@ type MapViewProps = {
 };
 
 export function MapView({ cafes, selectedSlug, onSelect }: MapViewProps) {
+  const { savedSlugs } = useSavedCafes();
   const selectedShop = cafes.find((cafe) => cafe.slug === selectedSlug) ?? null;
+
+  const markerIcons = useMemo(() => {
+    const savedSet = new Set(savedSlugs);
+    const icons = new Map<string, L.DivIcon>();
+    for (const cafe of cafes) {
+      icons.set(cafe.slug, createMarkerIcon(savedSet.has(cafe.slug)));
+    }
+    return icons;
+  }, [cafes, savedSlugs]);
 
   return (
     <div className="map-view">
@@ -47,15 +61,13 @@ export function MapView({ cafes, selectedSlug, onSelect }: MapViewProps) {
           <Marker
             key={cafe.id}
             position={[cafe.location.lat, cafe.location.lng]}
-            icon={markerIcon}
+            icon={markerIcons.get(cafe.slug) ?? createMarkerIcon(savedSlugs.includes(cafe.slug))}
             eventHandlers={{
               click: () => onSelect(cafe.slug),
             }}
           >
             <Popup>
-              <strong>{cafe.name}</strong>
-              <br />
-              {cafe.signatureDrink}
+              <MapMarkerPopup shop={cafe} />
             </Popup>
           </Marker>
         ))}

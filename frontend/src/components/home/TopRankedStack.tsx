@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Shop } from "@/lib/types";
 import { DoodleCat, DoodleCrown, DoodleRibbon } from "@/components/doodles/Doodles";
+import { SaveCafeButton } from "@/components/save/SaveCafeButton";
 import type { ReactNode } from "react";
 
 type RankCardCompactProps = {
@@ -35,6 +36,7 @@ export function RankCardCompact({ shop, doodle, doodleClass }: RankCardCompactPr
           View
         </Link>
       </div>
+      <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="rank-card-save" />
     </article>
   );
 }

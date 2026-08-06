@@ -29,4 +29,5 @@ export type Shop = {
   prepStyles?: string[];
   editorsPick?: boolean;
   rank?: number;
+  coverImage?: string;
 };

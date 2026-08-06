@@ -16,4 +16,11 @@ export const tokens = {
   warmBrown: "#6b5848",
   brownLight: "#a28e7a",
   brownTan: "#c9b89a",
+  breakpoints: {
+    mobileMax: 639,
+    tabletMin: 640,
+    laptopMin: 1024,
+    desktopMin: 1440,
+    contentMax: 1280,
+  },
 } as const;

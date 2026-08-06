@@ -5,7 +5,7 @@ export function Topbar() {
         <span className="dot" />
         matchamaps.sg
       </span>
-      <span className="topbar-item">
+      <span className="topbar-item topbar-item--email">
         <span className="dot" />
         hello@matchamaps.sg
       </span>

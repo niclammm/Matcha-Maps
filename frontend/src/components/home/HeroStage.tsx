@@ -1,3 +1,6 @@
+"use client";
+
+import { useLayoutEffect, useRef, useState } from "react";
 import { HeroMatchaVisual } from "@/components/home/HeroMatchaVisual";
 import { DoodleStar } from "@/components/doodles/Doodles";
 
@@ -13,7 +16,7 @@ const RING = [
   { src: "/matcha-pictures/web/matcha_19.png", tile: "tile-honey", rot: "-3deg", size: "15%" },
 ] as const;
 
-const RING_RADIUS_PERCENT = 40;
+const DEFAULT_RING_RADIUS = 40;
 
 function ringOffset(index: number, total: number, radiusPercent: number) {
   const angle = (index / total) * Math.PI * 2 - Math.PI / 2;
@@ -23,12 +26,38 @@ function ringOffset(index: number, total: number, radiusPercent: number) {
   };
 }
 
+function readRingRadius(el: HTMLElement) {
+  const raw = getComputedStyle(el).getPropertyValue("--ring-radius").trim();
+  const value = parseFloat(raw);
+  return Number.isFinite(value) ? value : DEFAULT_RING_RADIUS;
+}
+
 export function HeroStage() {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [ringRadius, setRingRadius] = useState(DEFAULT_RING_RADIUS);
+
+  useLayoutEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+
+    const update = () => setRingRadius(readRingRadius(el));
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    window.addEventListener("resize", update);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
   return (
-    <div className="hero-stage">
+    <div className="hero-stage" ref={stageRef}>
       <div className="hero-stage-photos" aria-hidden="true">
         {RING.map((tile, i) => {
-          const { dx, dy } = ringOffset(i, RING.length, RING_RADIUS_PERCENT);
+          const { dx, dy } = ringOffset(i, RING.length, ringRadius);
           return (
             <div
               key={tile.src}

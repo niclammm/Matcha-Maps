@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Work_Sans } from "next/font/google";
+import { AppProviders } from "@/components/providers/AppProviders";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -23,7 +24,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${fraunces.variable} ${workSans.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

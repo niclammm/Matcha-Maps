@@ -67,8 +67,28 @@ export function DoodleCat({ className }: { className?: string }) {
       <circle cx="44" cy="30" r="2" fill="currentColor" />
       <path d="M32 38 Q36 42 40 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M34 36 L36 37 L38 36" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Left whiskers */}
       <path
-        d="M54 28 C58 24 64 26 66 30"
+        d="M18 28 C13 25 8 25 4 26"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M18 32 C12 31 7 32 4 34"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      {/* Right whiskers */}
+      <path
+        d="M54 28 C59 25 64 25 68 26"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M54 32 C60 31 65 32 68 34"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"

@@ -22,6 +22,7 @@ export const cafes: Shop[] = [
     prepStyles: ["koicha", "usucha"],
     editorsPick: true,
     rank: 1,
+    coverImage: "/matcha-pictures/web/matcha_2.png",
   },
   {
     id: "2",
@@ -43,6 +44,7 @@ export const cafes: Shop[] = [
     prepStyles: ["latte", "soft-serve"],
     editorsPick: false,
     rank: 3,
+    coverImage: "/matcha-pictures/web/matcha_10.png",
   },
   {
     id: "3",
@@ -60,6 +62,7 @@ export const cafes: Shop[] = [
     },
     flavorTags: ["sweet", "grassy"],
     prepStyles: ["latte", "frappe"],
+    coverImage: "/matcha-pictures/web/matcha_16.png",
   },
   {
     id: "4",
@@ -78,6 +81,7 @@ export const cafes: Shop[] = [
     matchaOrigin: "Kagoshima",
     flavorTags: ["grassy", "bitter"],
     prepStyles: ["latte", "dessert"],
+    coverImage: "/matcha-pictures/web/matcha_8.png",
   },
   {
     id: "5",
@@ -100,6 +104,7 @@ export const cafes: Shop[] = [
     prepStyles: ["usucha", "koicha"],
     editorsPick: true,
     rank: 2,
+    coverImage: "/matcha-pictures/web/matcha_19.png",
   },
 ];
 
@@ -112,4 +117,10 @@ export function getTopRanked(limit = 3): Shop[] {
 
 export function getCafeBySlug(slug: string): Shop | undefined {
   return cafes.find((cafe) => cafe.slug === slug);
+}
+
+export function getCafesBySlugs(slugs: string[]): Shop[] {
+  return slugs
+    .map((slug) => getCafeBySlug(slug))
+    .filter((cafe): cafe is Shop => cafe != null);
 }

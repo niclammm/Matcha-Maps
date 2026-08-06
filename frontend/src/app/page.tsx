@@ -25,8 +25,9 @@ export default function HomePage() {
               Found.
             </h1>
             <p className="lede">
-              The best matcha guaranteed — every cafe and bowl in Singapore, tasted, rated, and mapped so you never
-              waste a sip.
+              Singapore's best specialty matcha, 
+              tasted, rated, and mapped 
+              so you never waste a sip.
             </p>
             <div className="stats">
               <span>★ 4.8 average rating</span>

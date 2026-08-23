@@ -5,13 +5,21 @@ import { useMemo } from "react";
 import { CafeCard } from "@/components/cards/CafeCard";
 import { Nav } from "@/components/layout/Nav";
 import { Topbar } from "@/components/layout/Topbar";
-import { getCafesBySlugs } from "@/data/cafes";
+import { useCafes } from "@/components/providers/CafesProvider";
 import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
 
 export function ListPageClient() {
-  const { savedSlugs, count, hydrated } = useSavedCafes();
+  const { savedSlugs, count, hydrated: savedHydrated } = useSavedCafes();
+  const { cafes, hydrated: cafesHydrated } = useCafes();
+  const hydrated = savedHydrated && cafesHydrated;
 
-  const savedCafes = useMemo(() => getCafesBySlugs(savedSlugs), [savedSlugs]);
+  const savedCafes = useMemo(
+    () =>
+      savedSlugs
+        .map((slug) => cafes.find((cafe) => cafe.slug === slug))
+        .filter((cafe): cafe is (typeof cafes)[number] => cafe != null),
+    [cafes, savedSlugs],
+  );
 
   const subtitle =
     count === 0

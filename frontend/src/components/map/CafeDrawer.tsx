@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import type { CafeReview, MergedShop, NewCafeInput } from "@/lib/types";
 import { useCafes } from "@/components/providers/CafesProvider";
 import { SaveCafeButton } from "@/components/save/SaveCafeButton";
@@ -93,6 +93,14 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
   const [newReview, setNewReview] = useState({ author: "", text: "", rating: "" });
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // This is a non-modal panel (the map stays interactive behind it), so it
+  // doesn't get a focus trap -- just move focus in when it appears, since
+  // it's a fresh mount each time the parent opens it.
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (mode === "edit" && shop) setForm(shopToForm(shop));
@@ -242,8 +250,14 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     !isWithinSingapore(latNum, lngNum);
 
   return (
-    <aside className="cafe-drawer" role="dialog" aria-label={mode === "add" ? "Add a cafe" : (shop?.name ?? "Cafe details")}>
-      <button type="button" className="cafe-drawer-close" onClick={onClose} aria-label="Close">
+    <aside className="cafe-drawer" role="complementary" aria-label={mode === "add" ? "Add a cafe" : (shop?.name ?? "Cafe details")}>
+      <button
+        type="button"
+        ref={closeButtonRef}
+        className="cafe-drawer-close"
+        onClick={onClose}
+        aria-label="Close"
+      >
         ×
       </button>
 

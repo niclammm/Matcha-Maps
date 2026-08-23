@@ -1758,6 +1758,12 @@ a.btn {
   box-shadow: 0 0 0 2px var(--gold), 0 3px 10px rgba(107, 88, 72, 0.4);
 }
 
+/* Matches the map legend: default pins are the curated "tasted & rated"
+   baseline, saved pins pick up the "on the list" tan used by the legend. */
+.map-pin--saved .map-pin-dot {
+  background: var(--brown-tan);
+}
+
 .map-pin--near .map-pin-dot {
   transform: scale(1.2);
 }
@@ -1827,7 +1833,7 @@ a.btn {
   display: block;
 }
 
-.dot-map-legend-swatch--tasted { background: var(--matcha-dark); }
+.dot-map-legend-swatch--tasted { background: var(--saved-marker); }
 .dot-map-legend-swatch--list { background: var(--brown-tan); }
 
 @media (max-width: 639px) {

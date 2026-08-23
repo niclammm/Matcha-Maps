@@ -5,6 +5,7 @@ import type { MergedShop } from "@/lib/types";
 import { DotMapField } from "@/lib/dot-map-field";
 import { gridToPercent, projectToGrid } from "@/lib/geo";
 import { DoodlePeople, DoodleTeapot } from "@/components/doodles/Doodles";
+import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
 
 type DotMapProps = {
   cafes: MergedShop[];
@@ -16,6 +17,7 @@ export function DotMap({ cafes, selectedSlug, onSelect }: DotMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fieldRef = useRef<DotMapField | null>(null);
   const [nearSlug, setNearSlug] = useState<string | null>(null);
+  const { isSaved } = useSavedCafes();
 
   const points = useMemo(
     () => cafes.map((c) => ({ slug: c.slug, ...projectToGrid(c.location.lat, c.location.lng) })),
@@ -82,11 +84,12 @@ export function DotMap({ cafes, selectedSlug, onSelect }: DotMapProps) {
           if (!pos) return null;
           const isSelected = selectedSlug === cafe.slug;
           const isNear = nearSlug === cafe.slug;
+          const saved = isSaved(cafe.slug);
           return (
             <button
               key={cafe.id}
               type="button"
-              className={`map-pin${isSelected ? " map-pin--selected" : ""}${isNear ? " map-pin--near" : ""}${cafe.isCustom ? " map-pin--custom" : ""}`}
+              className={`map-pin${isSelected ? " map-pin--selected" : ""}${isNear ? " map-pin--near" : ""}${cafe.isCustom ? " map-pin--custom" : ""}${saved ? " map-pin--saved" : ""}`}
               style={{ left: pos.left, top: pos.top }}
               onClick={() => onSelect(cafe.slug)}
               aria-label={cafe.name}

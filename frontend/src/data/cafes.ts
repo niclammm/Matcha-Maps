@@ -115,12 +115,3 @@ export function getTopRanked(limit = 3): Shop[] {
     .slice(0, limit);
 }
 
-export function getCafeBySlug(slug: string): Shop | undefined {
-  return cafes.find((cafe) => cafe.slug === slug);
-}
-
-export function getCafesBySlugs(slugs: string[]): Shop[] {
-  return slugs
-    .map((slug) => getCafeBySlug(slug))
-    .filter((cafe): cafe is Shop => cafe != null);
-}

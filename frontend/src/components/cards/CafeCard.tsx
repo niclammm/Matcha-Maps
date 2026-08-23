@@ -1,10 +1,10 @@
-import type { Shop } from "@/lib/types";
+import type { MergedShop, Shop } from "@/lib/types";
 import Link from "next/link";
 import { SaveCafeButton } from "@/components/save/SaveCafeButton";
 import { reviewCountOf } from "@/lib/cafe-helpers";
 
 type CafeCardProps = {
-  shop: Shop & { isCustom?: boolean };
+  shop: MergedShop;
   selected?: boolean;
   onSelect?: () => void;
   variant?: "default" | "grid" | "rail";

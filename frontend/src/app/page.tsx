@@ -25,7 +25,7 @@ export default function HomePage() {
               Found.
             </h1>
             <p className="lede">
-              Singapore's best specialty matcha, 
+              Singapore&apos;s best specialty matcha,
               tasted, rated, and mapped 
               so you never waste a sip.
             </p>

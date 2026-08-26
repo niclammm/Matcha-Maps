@@ -25,7 +25,10 @@ export function CafeCard({ shop, selected = false, onSelect, variant = "default"
 
   if (isRail) {
     return (
-      <article className={`cafe-card-rail${selected ? " cafe-card-rail-selected" : ""}`}>
+      <article
+        className={`cafe-card-rail${selected ? " cafe-card-rail-selected" : ""}`}
+        data-rank={shop.rank ?? undefined}
+      >
         <button type="button" className="cafe-card-rail-click" onClick={onSelect}>
           <div className="cafe-card-rail-photo">
             {shop.coverImage && (

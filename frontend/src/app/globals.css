@@ -2166,36 +2166,38 @@ a.btn {
   right: 10px;
 }
 
-/* per-rank color language, matching the home page rank cards */
-.rail-track .cafe-card-rail:nth-child(2) {
+/* per-rank color language, matching the home page rank cards. Keyed on
+   the cafe's actual data-rank (not list position), so filtering/search
+   never mislabels an unranked cafe with a top-3 color. */
+.cafe-card-rail[data-rank="2"] {
   background: var(--powder-blue);
 }
 
-.rail-track .cafe-card-rail:nth-child(3) {
+.cafe-card-rail[data-rank="3"] {
   background: var(--matcha);
   color: var(--off-white);
   border-color: rgba(255, 255, 255, 0.12);
 }
-.rail-track .cafe-card-rail:nth-child(3) .cafe-card-rail-top .rank-badge,
-.rail-track .cafe-card-rail:nth-child(3) .cafe-card-rail-name {
+.cafe-card-rail[data-rank="3"] .cafe-card-rail-top .rank-badge,
+.cafe-card-rail[data-rank="3"] .cafe-card-rail-name {
   color: var(--off-white);
 }
-.rail-track .cafe-card-rail:nth-child(3) .cafe-card-rail-top .rank-area,
-.rail-track .cafe-card-rail:nth-child(3) .cafe-card-rail-dish {
+.cafe-card-rail[data-rank="3"] .cafe-card-rail-top .rank-area,
+.cafe-card-rail[data-rank="3"] .cafe-card-rail-dish {
   color: rgba(250, 249, 244, 0.82);
 }
 
-.rail-track .cafe-card-rail:nth-child(4) {
+.cafe-card-rail[data-rank="4"] {
   background: var(--matcha-dark);
   color: var(--off-white);
   border-color: rgba(255, 255, 255, 0.12);
 }
-.rail-track .cafe-card-rail:nth-child(4) .cafe-card-rail-top .rank-badge,
-.rail-track .cafe-card-rail:nth-child(4) .cafe-card-rail-name {
+.cafe-card-rail[data-rank="4"] .cafe-card-rail-top .rank-badge,
+.cafe-card-rail[data-rank="4"] .cafe-card-rail-name {
   color: var(--off-white);
 }
-.rail-track .cafe-card-rail:nth-child(4) .cafe-card-rail-top .rank-area,
-.rail-track .cafe-card-rail:nth-child(4) .cafe-card-rail-dish {
+.cafe-card-rail[data-rank="4"] .cafe-card-rail-top .rank-area,
+.cafe-card-rail[data-rank="4"] .cafe-card-rail-dish {
   color: rgba(250, 249, 244, 0.82);
 }
 

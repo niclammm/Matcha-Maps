@@ -21,11 +21,6 @@ const AREA_LABELS: { name: string; lat: number; lng: number; anchor?: "start" | 
   { name: "Chinatown", lat: 1.2745, lng: 103.85, anchor: "start" },
 ];
 
-function stars(rating: number): string {
-  const full = Math.round(rating);
-  return "★".repeat(full) + "☆".repeat(5 - full);
-}
-
 type PreviewState = { cafe: MergedShop; left: number; top: number };
 
 type ScrapbookMapProps = {
@@ -103,8 +98,8 @@ export function ScrapbookMap({
 
     // faint hatch across the water, drawn like pencil strokes
     const hatch = svg.append("g").attr("stroke", "rgba(120,158,173,.28)").attr("stroke-width", 1);
-    for (let y = -h; y < w + h; y += 26) {
-      hatch.append("line").attr("x1", y).attr("y1", 0).attr("x2", y - h).attr("y2", h);
+    for (let offset = -h; offset < w + h; offset += 26) {
+      hatch.append("line").attr("x1", offset).attr("y1", 0).attr("x2", offset - h).attr("y2", h);
     }
 
     // neighbouring land, kept as pale silhouettes for the strait
@@ -298,10 +293,22 @@ export function ScrapbookMap({
 
   useEffect(() => {
     if (!geo || !stageRef.current) return;
-    draw();
-    const ro = new ResizeObserver(() => draw());
+    // draw() rebuilds the whole SVG (island/water/dot-texture/labels/pin
+    // placement), which is too heavy to run synchronously on every single
+    // ResizeObserver callback a window drag can fire in quick succession.
+    // Coalesce to one draw per animation frame; the observer's guaranteed
+    // initial callback on observe() covers the first paint too.
+    let rafId = 0;
+    const scheduleDraw = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(draw);
+    };
+    const ro = new ResizeObserver(scheduleDraw);
     ro.observe(stageRef.current);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
   }, [geo, draw]);
 
   const showPreview = (cafe: MergedShop) => {
@@ -334,6 +341,7 @@ export function ScrapbookMap({
           <span aria-hidden="true">⌕</span>
           <input
             type="search"
+            aria-label="Search cafes or areas"
             placeholder="Search cafes or areas"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
@@ -417,6 +425,3 @@ export function ScrapbookMap({
     </section>
   );
 }
-
-// re-export for callers that only need the star helper
-export { stars as starsForRating };

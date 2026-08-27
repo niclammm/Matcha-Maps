@@ -8,8 +8,6 @@ type CafeCardProps = {
   selected?: boolean;
   onSelect?: () => void;
   variant?: "default" | "grid" | "rail";
-  /** Rail variant only: a pastel tile background class (e.g. "tile-sage"). */
-  tileClass?: string;
 };
 
 function priceLabel(tier: Shop["priceTier"]) {
@@ -21,43 +19,39 @@ function starsForRating(rating: number): string {
   return "★".repeat(full) + "☆".repeat(5 - full);
 }
 
-export function CafeCard({
-  shop,
-  selected = false,
-  onSelect,
-  variant = "default",
-  tileClass,
-}: CafeCardProps) {
+export function CafeCard({ shop, selected = false, onSelect, variant = "default" }: CafeCardProps) {
   const isGrid = variant === "grid";
   const isRail = variant === "rail";
 
   if (isRail) {
     return (
       <article
-        className={`cafe-card-rail${tileClass ? ` ${tileClass}` : ""}${selected ? " cafe-card-rail-selected" : ""}`}
+        className={`cafe-card-rail${selected ? " cafe-card-rail-selected" : ""}`}
+        data-rank={shop.rank ?? undefined}
       >
-        <div className="cafe-card-rail-top">
-          <span>{shop.rank ? `#${shop.rank}` : shop.isCustom ? "New" : "Top"}</span>
-          <span>{shop.area}</span>
-        </div>
-
-        <button type="button" className="cafe-card-rail-main" onClick={onSelect}>
-          <h3 className="cafe-card-rail-name">{shop.name}</h3>
-          <div className="cafe-card-rail-rating">
-            <span className="stars" aria-hidden="true">
-              {starsForRating(shop.rating)}
-            </span>
-            <span>{shop.rating.toFixed(1)}</span>
+        <button type="button" className="cafe-card-rail-click" onClick={onSelect}>
+          <div className="cafe-card-rail-photo">
+            {shop.coverImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={shop.coverImage} alt="" />
+            )}
           </div>
-          <p className="cafe-card-rail-dish">{shop.signatureDrink}</p>
+          <div className="cafe-card-rail-body">
+            <div className="cafe-card-rail-top">
+              <span className="rank-badge">{shop.rank ? `#${shop.rank}` : "On the list"}</span>
+              <span className="rank-area">{shop.area}</span>
+            </div>
+            <h3 className="cafe-card-rail-name">{shop.name}</h3>
+            <div className="cafe-card-rail-rating">
+              <span className="stars" aria-hidden="true">
+                {starsForRating(shop.rating)}
+              </span>
+              <span>{shop.rating.toFixed(1)}</span>
+            </div>
+            <p className="cafe-card-rail-dish">{shop.signatureDrink}</p>
+          </div>
         </button>
-
-        <div className="cafe-card-rail-footer">
-          <button type="button" className="btn btn-primary cafe-card-rail-btn" onClick={onSelect}>
-            View
-          </button>
-          <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" />
-        </div>
+        <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-rail-save" />
       </article>
     );
   }

@@ -6,7 +6,7 @@ export default function ReviewsPage() {
     <>
       <Topbar />
       <main className="frame placeholder-page">
-        <Nav active="reviews" />
+        <Nav />
         <h1 className="headline">Reviews</h1>
         <p className="lede">Community reviews and editorial picks coming soon.</p>
       </main>

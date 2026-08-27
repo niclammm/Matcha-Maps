@@ -25,11 +25,11 @@ export function SaveCafeButton({
 
   const label = cafeName
     ? saved
-      ? `Remove ${cafeName} from My List`
-      : `Save ${cafeName} to My List`
+      ? `Remove ${cafeName} from Wish List`
+      : `Save ${cafeName} to Wish List`
     : saved
-      ? "Remove from My List"
-      : "Save to My List";
+      ? "Remove from Wish List"
+      : "Save to Wish List";
 
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -55,7 +55,7 @@ export function SaveCafeButton({
       aria-label={label}
     >
       <MatchaGlassIcon saved={saved} className="matcha-glass-icon" />
-      {showLabel && <span className="save-cafe-btn-label">{saved ? "Saved" : "Save to My List"}</span>}
+      {showLabel && <span className="save-cafe-btn-label">{saved ? "Saved" : "Save to Wish List"}</span>}
     </button>
   );
 }

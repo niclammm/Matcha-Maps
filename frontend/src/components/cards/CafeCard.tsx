@@ -1,6 +1,7 @@
 import type { MergedShop, Shop } from "@/lib/types";
 import Link from "next/link";
 import { SaveCafeButton } from "@/components/save/SaveCafeButton";
+import { MarkTriedButton } from "@/components/tried/MarkTriedButton";
 import { reviewCountOf } from "@/lib/cafe-helpers";
 
 type CafeCardProps = {
@@ -8,6 +9,10 @@ type CafeCardProps = {
   selected?: boolean;
   onSelect?: () => void;
   variant?: "default" | "grid" | "rail";
+  /** Which quick-toggle button the card shows. Defaults to the Wish List
+   * toggle; pass "tried" on surfaces scoped to the Tasted bucket so the
+   * card can be un-marked without opening the drawer. */
+  action?: "save" | "tried";
 };
 
 function priceLabel(tier: Shop["priceTier"]) {
@@ -19,7 +24,13 @@ function starsForRating(rating: number): string {
   return "★".repeat(full) + "☆".repeat(5 - full);
 }
 
-export function CafeCard({ shop, selected = false, onSelect, variant = "default" }: CafeCardProps) {
+export function CafeCard({
+  shop,
+  selected = false,
+  onSelect,
+  variant = "default",
+  action = "save",
+}: CafeCardProps) {
   const isGrid = variant === "grid";
   const isRail = variant === "rail";
 
@@ -51,7 +62,11 @@ export function CafeCard({ shop, selected = false, onSelect, variant = "default"
             <p className="cafe-card-rail-dish">{shop.signatureDrink}</p>
           </div>
         </button>
-        <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-rail-save" />
+        {action === "tried" ? (
+          <MarkTriedButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-rail-save" />
+        ) : (
+          <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-rail-save" />
+        )}
       </article>
     );
   }
@@ -70,7 +85,11 @@ export function CafeCard({ shop, selected = false, onSelect, variant = "default"
           <span className="cafe-area">{shop.area}</span>
           <div className="cafe-card-top-end">
             <span className="cafe-price">{priceLabel(shop.priceTier)}</span>
-            <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-save" />
+            {action === "tried" ? (
+              <MarkTriedButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-save" />
+            ) : (
+              <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-save" />
+            )}
           </div>
         </div>
 

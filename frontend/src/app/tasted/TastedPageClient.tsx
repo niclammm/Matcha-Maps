@@ -6,47 +6,47 @@ import { CafeCard } from "@/components/cards/CafeCard";
 import { Nav } from "@/components/layout/Nav";
 import { Topbar } from "@/components/layout/Topbar";
 import { useCafes } from "@/components/providers/CafesProvider";
-import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
+import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
 
-export function ListPageClient() {
-  const { savedSlugs, count, hydrated: savedHydrated } = useSavedCafes();
+export function TastedPageClient() {
+  const { triedSlugs, count, hydrated: triedHydrated } = useTriedCafes();
   const { cafes, hydrated: cafesHydrated } = useCafes();
-  const hydrated = savedHydrated && cafesHydrated;
+  const hydrated = triedHydrated && cafesHydrated;
 
-  const savedCafes = useMemo(
+  const triedCafes = useMemo(
     () =>
-      savedSlugs
+      triedSlugs
         .map((slug) => cafes.find((cafe) => cafe.slug === slug))
         .filter((cafe): cafe is (typeof cafes)[number] => cafe != null),
-    [cafes, savedSlugs],
+    [cafes, triedSlugs],
   );
 
   const subtitle =
     count === 0
-      ? "No cafes on your wish list yet"
+      ? "No cafes tasted yet"
       : count === 1
-        ? "1 cafe on your wish list"
-        : `${count} cafes on your wish list`;
+        ? "1 cafe tasted"
+        : `${count} cafes tasted`;
 
   return (
     <>
       <Topbar />
       <main className="frame list-page">
-        <Nav active="wishlist" />
+        <Nav active="tasted" />
 
         <header className="list-page-header">
-          <p className="list-page-eyebrow">Wish List</p>
-          <h1 className="headline list-page-title">Cafes I want to try</h1>
+          <p className="list-page-eyebrow">Tasted</p>
+          <h1 className="headline list-page-title">Cafes I&apos;ve tried</h1>
           <p className="lede list-page-subtitle">{subtitle}</p>
         </header>
 
         {!hydrated ? (
-          <p className="list-page-loading">Loading your wish list…</p>
+          <p className="list-page-loading">Loading your tasted cafes…</p>
         ) : count === 0 ? (
           <div className="list-page-empty">
-            <p className="list-page-empty-title">Your wish list is empty.</p>
+            <p className="list-page-empty-title">You haven&apos;t tasted any cafes yet.</p>
             <p className="list-page-empty-body">
-              Find a cafe you want to try and add it here.
+              Once you&apos;ve tried a cafe, mark it tasted and it&apos;ll show up here.
             </p>
             <Link href="/map" className="btn btn-primary list-page-empty-cta">
               Explore the map →
@@ -54,8 +54,8 @@ export function ListPageClient() {
           </div>
         ) : (
           <div className="list-page-grid">
-            {savedCafes.map((shop) => (
-              <CafeCard key={shop.id} shop={shop} variant="grid" />
+            {triedCafes.map((shop) => (
+              <CafeCard key={shop.id} shop={shop} variant="grid" action="tried" />
             ))}
           </div>
         )}

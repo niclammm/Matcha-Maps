@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type Key
 import type { CafeReview, MergedShop, NewCafeInput } from "@/lib/types";
 import { useCafes } from "@/components/providers/CafesProvider";
 import { SaveCafeButton } from "@/components/save/SaveCafeButton";
+import { MarkTriedButton } from "@/components/tried/MarkTriedButton";
 import {
   dataUrlBytes,
   fileToDataUrl,
@@ -278,7 +279,10 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
                 </span>
               </div>
             </div>
-            <SaveCafeButton slug={shop.slug} cafeName={shop.name} />
+            <div className="cafe-drawer-header-actions">
+              <SaveCafeButton slug={shop.slug} cafeName={shop.name} />
+              <MarkTriedButton slug={shop.slug} cafeName={shop.name} />
+            </div>
           </div>
 
           {shop.photos && shop.photos.length > 0 && (

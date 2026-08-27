@@ -5,6 +5,7 @@ import type { CafeReview, MergedShop, NewCafeInput } from "@/lib/types";
 import { useCafes } from "@/components/providers/CafesProvider";
 import { SaveCafeButton } from "@/components/save/SaveCafeButton";
 import { MarkTriedButton } from "@/components/tried/MarkTriedButton";
+import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
 import {
   dataUrlBytes,
   fileToDataUrl,
@@ -58,7 +59,7 @@ function emptyForm(): FormState {
     lng: "",
     googleMapsUrl: "",
     priceTier: 2,
-    rating: "4.5",
+    rating: "",
     signatureDrink: "",
     popularDishes: [],
     photos: [],
@@ -77,7 +78,7 @@ function shopToForm(shop: MergedShop): FormState {
     lng: String(shop.location.lng),
     googleMapsUrl: shop.googleMapsUrl ?? "",
     priceTier: shop.priceTier,
-    rating: String(shop.rating),
+    rating: shop.rating != null ? String(shop.rating) : "",
     signatureDrink: shop.signatureDrink,
     popularDishes: shop.popularDishes ?? [],
     photos: shop.photos ?? [],
@@ -89,9 +90,11 @@ function shopToForm(shop: MergedShop): FormState {
 
 export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemoved }: CafeDrawerProps) {
   const { addCafe, updateCafe, removeCafe } = useCafes();
+  const { isTried, getTriedNote, setTriedNote, hydrated: triedHydrated } = useTriedCafes();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [dishInput, setDishInput] = useState("");
   const [newReview, setNewReview] = useState({ author: "", text: "", rating: "" });
+  const [noteDraft, setNoteDraft] = useState({ rating: "", comment: "" });
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -110,7 +113,19 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     setWarning(null);
     setDishInput("");
     setNewReview({ author: "", text: "", rating: "" });
-  }, [mode, shop]);
+    if (mode === "view" && shop) {
+      // Deliberately re-synced only when the drawer switches cafes/modes (or
+      // tried-cafes finishes its one-time load from storage), not on every
+      // tried-cafes change -- otherwise editing elsewhere while this note is
+      // mid-edit would stomp on unsaved keystrokes. Without the `triedHydrated`
+      // dependency, a hard refresh landing directly on /map?cafe=<slug> could
+      // read the note before TriedCafesProvider finishes hydrating and seed
+      // this draft blank, silently erasing a real note on the next blur.
+      const note = getTriedNote(shop.slug);
+      setNoteDraft({ rating: note.rating != null ? String(note.rating) : "", comment: note.comment });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, shop, triedHydrated]);
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
@@ -172,6 +187,13 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     }
   }
 
+  function commitTastedNote() {
+    if (!shop) return;
+    const trimmed = noteDraft.rating.trim();
+    const rating = trimmed === "" ? null : Math.min(5, Math.max(0, Number(trimmed) || 0));
+    setTriedNote(shop.slug, { rating, comment: noteDraft.comment });
+  }
+
   function handleGoogleMapsBlur() {
     const parsed = parseLatLngFromGoogleMapsUrl(form.googleMapsUrl);
     if (parsed) {
@@ -204,7 +226,8 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
       return;
     }
 
-    const rating = Math.min(5, Math.max(0, Number(form.rating) || 0));
+    const ratingTrimmed = form.rating.trim();
+    const rating = ratingTrimmed === "" ? undefined : Math.min(5, Math.max(0, Number(ratingTrimmed) || 0));
     const flavorTags = form.flavorTagsText
       .split(",")
       .map((t) => t.trim())
@@ -214,7 +237,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
       name,
       area,
       rating,
-      signatureDrink: form.signatureDrink.trim() || "Matcha",
+      signatureDrink: form.signatureDrink.trim(),
       priceTier: form.priceTier,
       location: { lat, lng, address: form.address.trim() },
       googleMapsUrl: form.googleMapsUrl.trim() || undefined,
@@ -251,7 +274,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     !isWithinSingapore(latNum, lngNum);
 
   return (
-    <aside className="cafe-drawer" role="complementary" aria-label={mode === "add" ? "Add a cafe" : (shop?.name ?? "Cafe details")}>
+    <aside className="cafe-drawer" role="complementary" aria-label={mode === "add" ? "Add a restaurant" : (shop?.name ?? "Cafe details")}>
       <button
         type="button"
         ref={closeButtonRef}
@@ -271,12 +294,18 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
               </p>
               <h2 className="cafe-drawer-name">{shop.name}</h2>
               <div className="cafe-rating">
-                <span className="stars" aria-hidden="true">
-                  {starsForRating(shop.rating)}
-                </span>
-                <span>
-                  {shop.rating.toFixed(1)} · {reviewCountOf(shop)} reviews
-                </span>
+                {shop.rating != null ? (
+                  <>
+                    <span className="stars" aria-hidden="true">
+                      {starsForRating(shop.rating)}
+                    </span>
+                    <span>
+                      {shop.rating.toFixed(1)} · {reviewCountOf(shop)} reviews
+                    </span>
+                  </>
+                ) : (
+                  <span className="cafe-rating-unrated">Not yet rated</span>
+                )}
               </div>
             </div>
             <div className="cafe-drawer-header-actions">
@@ -307,10 +336,38 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
             </a>
           )}
 
-          <div className="cafe-drawer-section">
-            <p className="cafe-drawer-section-title">Signature</p>
-            <p>{shop.signatureDrink}</p>
-          </div>
+          {isTried(shop.slug) && (
+            <div className="cafe-drawer-section">
+              <p className="cafe-drawer-section-title">Your tasting note</p>
+              <label className="cafe-drawer-field">
+                <span>Your rating</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={5}
+                  step={0.5}
+                  placeholder="Not yet rated"
+                  value={noteDraft.rating}
+                  onChange={(e) => setNoteDraft((d) => ({ ...d, rating: e.target.value }))}
+                  onBlur={commitTastedNote}
+                />
+              </label>
+              <textarea
+                className="cafe-drawer-note-textarea"
+                placeholder="What did you think?"
+                value={noteDraft.comment}
+                onChange={(e) => setNoteDraft((d) => ({ ...d, comment: e.target.value }))}
+                onBlur={commitTastedNote}
+              />
+            </div>
+          )}
+
+          {shop.signatureDrink && (
+            <div className="cafe-drawer-section">
+              <p className="cafe-drawer-section-title">Signature</p>
+              <p>{shop.signatureDrink}</p>
+            </div>
+          )}
 
           {shop.popularDishes && shop.popularDishes.length > 0 && (
             <div className="cafe-drawer-section">
@@ -381,7 +438,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
         </div>
       ) : (
         <form className="cafe-drawer-content cafe-drawer-form" onSubmit={handleSubmit}>
-          <h2 className="cafe-drawer-name">{mode === "add" ? "Add a cafe" : `Edit ${shop?.name ?? "cafe"}`}</h2>
+          <h2 className="cafe-drawer-name">{mode === "add" ? "Add a restaurant" : `Edit ${shop?.name ?? "restaurant"}`}</h2>
 
           {warning && <p className="cafe-drawer-warning">{warning}</p>}
 
@@ -449,12 +506,13 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
               </select>
             </label>
             <label className="cafe-drawer-field">
-              <span>Rating</span>
+              <span>Rating (optional)</span>
               <input
                 type="number"
                 min={0}
                 max={5}
                 step={0.1}
+                placeholder="Not yet rated"
                 value={form.rating}
                 onChange={(e) => setForm((f) => ({ ...f, rating: e.target.value }))}
               />
@@ -462,7 +520,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
           </div>
 
           <label className="cafe-drawer-field">
-            <span>Signature drink</span>
+            <span>Signature dish or drink</span>
             <input
               value={form.signatureDrink}
               onChange={(e) => setForm((f) => ({ ...f, signatureDrink: e.target.value }))}
@@ -574,7 +632,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              {mode === "add" ? "Add cafe" : "Save changes"}
+              {mode === "add" ? "Add restaurant" : "Save changes"}
             </button>
           </div>
         </form>

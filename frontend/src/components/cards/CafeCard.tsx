@@ -24,6 +24,20 @@ function starsForRating(rating: number): string {
   return "★".repeat(full) + "☆".repeat(5 - full);
 }
 
+function RatingDisplay({ rating }: { rating?: number }) {
+  if (rating == null) {
+    return <span className="cafe-rating-unrated">Not yet rated</span>;
+  }
+  return (
+    <>
+      <span className="stars" aria-hidden="true">
+        {starsForRating(rating)}
+      </span>
+      <span>{rating.toFixed(1)}</span>
+    </>
+  );
+}
+
 export function CafeCard({
   shop,
   selected = false,
@@ -54,12 +68,9 @@ export function CafeCard({
             </div>
             <h3 className="cafe-card-rail-name">{shop.name}</h3>
             <div className="cafe-card-rail-rating">
-              <span className="stars" aria-hidden="true">
-                {starsForRating(shop.rating)}
-              </span>
-              <span>{shop.rating.toFixed(1)}</span>
+              <RatingDisplay rating={shop.rating} />
             </div>
-            <p className="cafe-card-rail-dish">{shop.signatureDrink}</p>
+            {shop.signatureDrink && <p className="cafe-card-rail-dish">{shop.signatureDrink}</p>}
           </div>
         </button>
         {action === "tried" ? (
@@ -95,15 +106,10 @@ export function CafeCard({
 
         <button type="button" className="cafe-card-main" onClick={onSelect}>
           <h3 className="cafe-name">{shop.name}</h3>
-          <p className="cafe-signature">{shop.signatureDrink}</p>
+          {shop.signatureDrink && <p className="cafe-signature">{shop.signatureDrink}</p>}
           <div className="cafe-rating">
-            <span className="stars" aria-hidden="true">
-              ★
-            </span>
-            <span>
-              {shop.rating.toFixed(1)}
-              {!isGrid && ` · ${reviewCountOf(shop)} reviews`}
-            </span>
+            <RatingDisplay rating={shop.rating} />
+            {shop.rating != null && !isGrid && <span> · {reviewCountOf(shop)} reviews</span>}
           </div>
           {shop.flavorTags && shop.flavorTags.length > 0 && !isGrid && (
             <div className="flavor-tags">

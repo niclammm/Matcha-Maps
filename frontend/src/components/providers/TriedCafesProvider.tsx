@@ -10,32 +10,39 @@ import {
   type ReactNode,
 } from "react";
 import {
-  readTriedSlugs,
+  readTriedCafes,
   TRIED_CAFES_STORAGE_KEY,
-  writeTriedSlugs,
+  writeTriedCafes,
+  type TriedCafesData,
+  type TriedNote,
 } from "@/lib/tried-cafes-storage";
 
+const EMPTY_NOTE: TriedNote = { rating: null, comment: "" };
+
 type TriedCafesContextValue = {
+  triedCafes: TriedCafesData;
   triedSlugs: string[];
   count: number;
   isTried: (slug: string) => boolean;
   toggleTried: (slug: string) => void;
+  getTriedNote: (slug: string) => TriedNote;
+  setTriedNote: (slug: string, note: TriedNote) => void;
   hydrated: boolean;
 };
 
 const TriedCafesContext = createContext<TriedCafesContextValue | null>(null);
 
 export function TriedCafesProvider({ children }: { children: ReactNode }) {
-  const [triedSlugs, setTriedSlugs] = useState<string[]>([]);
+  const [triedCafes, setTriedCafes] = useState<TriedCafesData>({});
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setTriedSlugs(readTriedSlugs());
+    setTriedCafes(readTriedCafes());
     setHydrated(true);
 
     const onStorage = (event: StorageEvent) => {
       if (event.key === TRIED_CAFES_STORAGE_KEY || event.key === null) {
-        setTriedSlugs(readTriedSlugs());
+        setTriedCafes(readTriedCafes());
       }
     };
 
@@ -43,25 +50,46 @@ export function TriedCafesProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const isTried = useCallback((slug: string) => triedSlugs.includes(slug), [triedSlugs]);
+  const isTried = useCallback((slug: string) => slug in triedCafes, [triedCafes]);
 
   const toggleTried = useCallback((slug: string) => {
-    setTriedSlugs((prev) => {
-      const next = prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug];
-      writeTriedSlugs(next);
+    setTriedCafes((prev) => {
+      const next = { ...prev };
+      if (slug in next) {
+        delete next[slug];
+      } else {
+        next[slug] = { ...EMPTY_NOTE };
+      }
+      writeTriedCafes(next);
       return next;
     });
   }, []);
 
+  const getTriedNote = useCallback((slug: string) => triedCafes[slug] ?? EMPTY_NOTE, [triedCafes]);
+
+  const setTriedNote = useCallback((slug: string, note: TriedNote) => {
+    setTriedCafes((prev) => {
+      if (!(slug in prev)) return prev;
+      const next = { ...prev, [slug]: note };
+      writeTriedCafes(next);
+      return next;
+    });
+  }, []);
+
+  const triedSlugs = useMemo(() => Object.keys(triedCafes), [triedCafes]);
+
   const value = useMemo(
     () => ({
+      triedCafes,
       triedSlugs,
       count: triedSlugs.length,
       isTried,
       toggleTried,
+      getTriedNote,
+      setTriedNote,
       hydrated,
     }),
-    [triedSlugs, isTried, toggleTried, hydrated],
+    [triedCafes, triedSlugs, isTried, toggleTried, getTriedNote, setTriedNote, hydrated],
   );
 
   return <TriedCafesContext.Provider value={value}>{children}</TriedCafesContext.Provider>;

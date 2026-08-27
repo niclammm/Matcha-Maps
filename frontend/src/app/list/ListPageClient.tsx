@@ -1,17 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CafeCard } from "@/components/cards/CafeCard";
+import { CafeDrawer } from "@/components/map/CafeDrawer";
 import { Nav } from "@/components/layout/Nav";
 import { Topbar } from "@/components/layout/Topbar";
 import { useCafes } from "@/components/providers/CafesProvider";
 import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
+import type { MergedShop } from "@/lib/types";
 
 export function ListPageClient() {
-  const { savedSlugs, count, hydrated: savedHydrated } = useSavedCafes();
+  const { savedSlugs, count, isSaved, toggleSave, hydrated: savedHydrated } = useSavedCafes();
   const { cafes, hydrated: cafesHydrated } = useCafes();
   const hydrated = savedHydrated && cafesHydrated;
+  const [addOpen, setAddOpen] = useState(false);
 
   const savedCafes = useMemo(
     () =>
@@ -28,6 +31,11 @@ export function ListPageClient() {
         ? "1 cafe on your wish list"
         : `${count} cafes on your wish list`;
 
+  function handleAdded(shop: MergedShop) {
+    if (!isSaved(shop.slug)) toggleSave(shop.slug);
+    setAddOpen(false);
+  }
+
   return (
     <>
       <Topbar />
@@ -35,9 +43,16 @@ export function ListPageClient() {
         <Nav active="wishlist" />
 
         <header className="list-page-header">
-          <p className="list-page-eyebrow">Wish List</p>
-          <h1 className="headline list-page-title">Cafes I want to try</h1>
-          <p className="lede list-page-subtitle">{subtitle}</p>
+          <div className="list-page-header-top">
+            <div>
+              <p className="list-page-eyebrow">Wish List</p>
+              <h1 className="headline list-page-title">Cafes I want to try</h1>
+              <p className="lede list-page-subtitle">{subtitle}</p>
+            </div>
+            <button type="button" className="btn btn-primary" onClick={() => setAddOpen(true)}>
+              + Add restaurant
+            </button>
+          </div>
         </header>
 
         {!hydrated ? (
@@ -60,6 +75,17 @@ export function ListPageClient() {
           </div>
         )}
       </main>
+
+      {addOpen && (
+        <CafeDrawer
+          mode="add"
+          shop={null}
+          onClose={() => setAddOpen(false)}
+          onRequestEdit={() => {}}
+          onSaved={handleAdded}
+          onRemoved={() => setAddOpen(false)}
+        />
+      )}
     </>
   );
 }

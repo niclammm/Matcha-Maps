@@ -390,12 +390,18 @@ export function ScrapbookMap({
                 <div className="pin-disc">
                   <span>{cafe.name}</span>
                   <span className="pin-rating">
-                    <span className="star">★</span>
-                    {cafe.rating.toFixed(1)}
+                    {cafe.rating != null ? (
+                      <>
+                        <span className="star">★</span>
+                        {cafe.rating.toFixed(1)}
+                      </>
+                    ) : (
+                      "New"
+                    )}
                   </span>
                 </div>
                 <div className="pin-tip" />
-                <span className="pin-name">{cafe.signatureDrink}</span>
+                {cafe.signatureDrink && <span className="pin-name">{cafe.signatureDrink}</span>}
               </button>
             );
           })}
@@ -412,10 +418,16 @@ export function ScrapbookMap({
                 {preview.cafe.area}
               </div>
               <h4 className="preview-name">{preview.cafe.name}</h4>
-              <p className="preview-dish">{preview.cafe.signatureDrink}</p>
+              {preview.cafe.signatureDrink && <p className="preview-dish">{preview.cafe.signatureDrink}</p>}
               <div className="preview-rating">
-                <span className="star">★</span> {preview.cafe.rating.toFixed(1)} ·{" "}
-                {preview.cafe.reviewCount} reviews
+                {preview.cafe.rating != null ? (
+                  <>
+                    <span className="star">★</span> {preview.cafe.rating.toFixed(1)} ·{" "}
+                    {preview.cafe.reviewCount} reviews
+                  </>
+                ) : (
+                  "Not yet rated"
+                )}
               </div>
             </div>
           </div>

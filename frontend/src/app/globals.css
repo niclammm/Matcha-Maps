@@ -1561,6 +1561,14 @@ a.btn {
   margin-bottom: clamp(28px, 4vw, 48px);
 }
 
+.list-page-header-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .list-page-eyebrow {
   margin: 0 0 8px;
   font-size: 11px;
@@ -2532,6 +2540,26 @@ a.btn {
 .cafe-drawer-field textarea {
   min-height: 64px;
   resize: vertical;
+}
+
+.cafe-drawer-note-textarea {
+  width: 100%;
+  min-height: 64px;
+  margin-top: 10px;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--off-white);
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.cafe-rating-unrated {
+  font-size: 13px;
+  color: var(--text-faint);
+  font-style: italic;
 }
 
 .cafe-drawer-field-row {

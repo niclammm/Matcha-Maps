@@ -20,7 +20,7 @@ export default function MapPageClient() {
   const initialSlug = searchParams.get("cafe");
   const { cafes, hydrated: cafesHydrated } = useCafes();
   const { savedSlugs, hydrated: savedHydrated } = useSavedCafes();
-  const { triedSlugs, hydrated: triedHydrated } = useTriedCafes();
+  const { triedSlugs, triedCafes, hydrated: triedHydrated } = useTriedCafes();
   const hydrated = cafesHydrated && savedHydrated && triedHydrated;
 
   const [bucket, setBucket] = useState<Bucket>("wishlist");
@@ -40,7 +40,7 @@ export default function MapPageClient() {
     () =>
       cafes
         .filter((c) => bucketSlugSet.has(c.slug))
-        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || b.rating - a.rating),
+        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || (b.rating ?? 0) - (a.rating ?? 0)),
     [cafes, bucketSlugSet],
   );
 
@@ -64,9 +64,13 @@ export default function MapPageClient() {
   );
 
   const averageRating = useMemo(() => {
-    if (sortedCafes.length === 0) return 0;
-    return sortedCafes.reduce((sum, c) => sum + c.rating, 0) / sortedCafes.length;
-  }, [sortedCafes]);
+    if (bucket !== "tasted") return null;
+    const rated = sortedCafes
+      .map((c) => triedCafes[c.slug]?.rating)
+      .filter((r): r is number => r != null);
+    if (rated.length === 0) return null;
+    return rated.reduce((sum, r) => sum + r, 0) / rated.length;
+  }, [bucket, sortedCafes, triedCafes]);
 
   const drawerShop: MergedShop | null = drawer?.slug
     ? (cafes.find((c) => c.slug === drawer.slug) ?? null)
@@ -132,7 +136,7 @@ export default function MapPageClient() {
                   ? `${shownCount} ${shownCount === 1 ? "spot" : "spots"} on your ${bucketLabel}`
                   : "Loading cafes…"}
               </span>
-              {bucket === "tasted" && (
+              {bucket === "tasted" && averageRating != null && (
                 <>
                   <span className="stat-sep" aria-hidden="true" />
                   <span>★ {averageRating.toFixed(1)} average rating</span>
@@ -174,7 +178,7 @@ export default function MapPageClient() {
               <div className="rail-head">
                 <p className="rail-label">Top ranked</p>
                 <button type="button" className="btn btn-primary rail-add" onClick={openAdd}>
-                  + Add cafe
+                  + Add restaurant
                 </button>
               </div>
 

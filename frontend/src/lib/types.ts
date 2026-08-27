@@ -21,7 +21,8 @@ export type Shop = {
   slug: string;
   name: string;
   area: string;
-  rating: number;
+  /** Unset until someone rates it — a wishlisted place hasn't been tried yet. */
+  rating?: number;
   reviewCount: number;
   signatureDrink: string;
   priceTier: 1 | 2 | 3;

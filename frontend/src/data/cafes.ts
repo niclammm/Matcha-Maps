@@ -106,6 +106,51 @@ export const cafes: Shop[] = [
     rank: 2,
     coverImage: "/matcha-pictures/web/matcha_19.png",
   },
+  {
+    id: "6",
+    slug: "scarpetta",
+    name: "Scarpetta",
+    area: "Tanjong Pagar",
+    reviewCount: 0,
+    signatureDrink: "Handmade pasta",
+    priceTier: 2,
+    location: {
+      lat: 1.2803939,
+      lng: 103.8469458,
+      address: "47 Amoy Street, Singapore 069873",
+    },
+    googleMapsUrl: "https://maps.app.goo.gl/ULYPMkkCZhVHvqhGA",
+  },
+  {
+    id: "7",
+    slug: "huevos",
+    name: "Huevos",
+    area: "Bugis",
+    reviewCount: 0,
+    signatureDrink: "Huevos Rancheros",
+    priceTier: 2,
+    location: {
+      lat: 1.3040998,
+      lng: 103.860417,
+      address: "803 North Bridge Road, Singapore 198771",
+    },
+    googleMapsUrl: "https://maps.app.goo.gl/o1wSZT568QJbDQxJ9",
+  },
+  {
+    id: "8",
+    slug: "pasta-bar-the-original",
+    name: "Pasta Bar - The Original",
+    area: "Chinatown",
+    reviewCount: 0,
+    signatureDrink: "Cacio e Pepe",
+    priceTier: 2,
+    location: {
+      lat: 1.280686,
+      lng: 103.8416161,
+      address: "55 Keong Saik Rd, #01-05, Singapore 089158",
+    },
+    googleMapsUrl: "https://maps.app.goo.gl/fLMMCFUehfXLBsAr6",
+  },
 ];
 
 export function getTopRanked(limit = 3): Shop[] {

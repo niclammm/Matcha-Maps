@@ -27,9 +27,9 @@ export function RankCardCompact({ shop, doodle, doodleClass }: RankCardCompactPr
         <h3 className="rank-name-compact">{shop.name}</h3>
         <div className="rank-rating rank-rating-compact">
           <span className="stars" aria-hidden="true">
-            {starsForRating(shop.rating)}
+            {starsForRating(shop.rating ?? 0)}
           </span>
-          <span className="rank-count">{shop.rating.toFixed(1)}</span>
+          <span className="rank-count">{(shop.rating ?? 0).toFixed(1)}</span>
         </div>
         <p className="rank-dish-compact">{shop.signatureDrink}</p>
         <Link href={`/map?cafe=${shop.slug}`} className="btn btn-primary btn-compact">

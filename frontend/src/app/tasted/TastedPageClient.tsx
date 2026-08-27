@@ -55,7 +55,7 @@ export function TastedPageClient() {
         ) : (
           <div className="list-page-grid">
             {triedCafes.map((shop) => (
-              <CafeCard key={shop.id} shop={shop} variant="grid" action="tried" />
+              <CafeCard key={shop.id} shop={shop} variant="grid" />
             ))}
           </div>
         )}

@@ -17,7 +17,7 @@ import {
   type TriedNote,
 } from "@/lib/tried-cafes-storage";
 
-const EMPTY_NOTE: TriedNote = { rating: null, comment: "" };
+const EMPTY_NOTE: TriedNote = { rating: null, comment: "", photos: [] };
 
 type TriedCafesContextValue = {
   triedCafes: TriedCafesData;

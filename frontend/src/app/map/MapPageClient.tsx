@@ -42,7 +42,7 @@ export default function MapPageClient() {
     ];
     tastedSeed.forEach(({ slug, rating, comment }) => {
       if (!isTried(slug)) toggleTried(slug);
-      setTriedNote(slug, { rating, comment });
+      setTriedNote(slug, { rating, comment, photos: [] });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, hydrated]);
@@ -226,9 +226,9 @@ export default function MapPageClient() {
                         key={cafe.id}
                         shop={cafe}
                         variant="rail"
-                        action={bucket === "tasted" ? "tried" : "save"}
                         selected={selectedSlug === cafe.slug}
                         onSelect={() => openView(cafe.slug)}
+                        onMarkedTasted={() => openView(cafe.slug)}
                       />
                     ))}
                 </div>

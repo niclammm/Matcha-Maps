@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import type { CafeReview, MergedShop, NewCafeInput } from "@/lib/types";
 import { useCafes } from "@/components/providers/CafesProvider";
-import { SaveCafeButton } from "@/components/save/SaveCafeButton";
-import { MarkTriedButton } from "@/components/tried/MarkTriedButton";
+import { CafeStatusButton } from "@/components/status/CafeStatusButton";
 import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
 import {
   dataUrlBytes,
@@ -94,7 +93,11 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
   const [form, setForm] = useState<FormState>(emptyForm);
   const [dishInput, setDishInput] = useState("");
   const [newReview, setNewReview] = useState({ author: "", text: "", rating: "" });
-  const [noteDraft, setNoteDraft] = useState({ rating: "", comment: "" });
+  const [noteDraft, setNoteDraft] = useState<{ rating: string; comment: string; photos: string[] }>({
+    rating: "",
+    comment: "",
+    photos: [],
+  });
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -122,7 +125,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
       // read the note before TriedCafesProvider finishes hydrating and seed
       // this draft blank, silently erasing a real note on the next blur.
       const note = getTriedNote(shop.slug);
-      setNoteDraft({ rating: note.rating != null ? String(note.rating) : "", comment: note.comment });
+      setNoteDraft({ rating: note.rating != null ? String(note.rating) : "", comment: note.comment, photos: note.photos });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, shop, triedHydrated]);
@@ -187,11 +190,40 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     }
   }
 
-  function commitTastedNote() {
+  function commitTastedNote(photosOverride?: string[]) {
     if (!shop) return;
     const trimmed = noteDraft.rating.trim();
     const rating = trimmed === "" ? null : Math.min(5, Math.max(0, Number(trimmed) || 0));
-    setTriedNote(shop.slug, { rating, comment: noteDraft.comment });
+    setTriedNote(shop.slug, { rating, comment: noteDraft.comment, photos: photosOverride ?? noteDraft.photos });
+  }
+
+  async function handleNotePhotosSelected(e: ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const added: string[] = [];
+    for (const file of Array.from(files)) {
+      try {
+        added.push(await fileToDataUrl(file));
+      } catch {
+        // skip files that fail to decode, keep the rest
+      }
+    }
+    e.target.value = "";
+    const nextPhotos = [...noteDraft.photos, ...added];
+    setNoteDraft((d) => ({ ...d, photos: nextPhotos }));
+    // No blur event fires for a file picker, so commit immediately.
+    commitTastedNote(nextPhotos);
+
+    const totalBytes = nextPhotos.reduce((sum, p) => sum + dataUrlBytes(p), 0);
+    if (totalBytes > MAX_PHOTO_BYTES_WARN) {
+      setWarning("These photos are getting large -- if saving fails, remove one and try again.");
+    }
+  }
+
+  function removeNotePhoto(index: number) {
+    const nextPhotos = noteDraft.photos.filter((_, i) => i !== index);
+    setNoteDraft((d) => ({ ...d, photos: nextPhotos }));
+    commitTastedNote(nextPhotos);
   }
 
   function handleGoogleMapsBlur() {
@@ -308,10 +340,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
                 )}
               </div>
             </div>
-            <div className="cafe-drawer-header-actions">
-              <SaveCafeButton slug={shop.slug} cafeName={shop.name} />
-              <MarkTriedButton slug={shop.slug} cafeName={shop.name} />
-            </div>
+            <CafeStatusButton slug={shop.slug} cafeName={shop.name} />
           </div>
 
           {shop.photos && shop.photos.length > 0 && (
@@ -339,6 +368,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
           {isTried(shop.slug) && (
             <div className="cafe-drawer-section">
               <p className="cafe-drawer-section-title">Your tasting note</p>
+              {warning && <p className="cafe-drawer-warning">{warning}</p>}
               <label className="cafe-drawer-field">
                 <span>Your rating</span>
                 <input
@@ -349,7 +379,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
                   placeholder="Not yet rated"
                   value={noteDraft.rating}
                   onChange={(e) => setNoteDraft((d) => ({ ...d, rating: e.target.value }))}
-                  onBlur={commitTastedNote}
+                  onBlur={() => commitTastedNote()}
                 />
               </label>
               <textarea
@@ -357,8 +387,25 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
                 placeholder="What did you think?"
                 value={noteDraft.comment}
                 onChange={(e) => setNoteDraft((d) => ({ ...d, comment: e.target.value }))}
-                onBlur={commitTastedNote}
+                onBlur={() => commitTastedNote()}
               />
+              <div className="cafe-drawer-field">
+                <span>Your photos</span>
+                <input type="file" accept="image/*" multiple onChange={handleNotePhotosSelected} />
+                {noteDraft.photos.length > 0 && (
+                  <div className="cafe-drawer-photo-thumbs">
+                    {noteDraft.photos.map((src, i) => (
+                      <div key={i} className="cafe-drawer-photo-thumb">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" />
+                        <button type="button" onClick={() => removeNotePhoto(i)} aria-label="Remove photo">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

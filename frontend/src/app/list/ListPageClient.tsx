@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { CafeCard } from "@/components/cards/CafeCard";
 import { CafeDrawer } from "@/components/map/CafeDrawer";
@@ -11,6 +12,7 @@ import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
 import type { MergedShop } from "@/lib/types";
 
 export function ListPageClient() {
+  const router = useRouter();
   const { savedSlugs, count, isSaved, toggleSave, hydrated: savedHydrated } = useSavedCafes();
   const { cafes, hydrated: cafesHydrated } = useCafes();
   const hydrated = savedHydrated && cafesHydrated;
@@ -70,7 +72,12 @@ export function ListPageClient() {
         ) : (
           <div className="list-page-grid">
             {savedCafes.map((shop) => (
-              <CafeCard key={shop.id} shop={shop} variant="grid" />
+              <CafeCard
+                key={shop.id}
+                shop={shop}
+                variant="grid"
+                onMarkedTasted={() => router.push(`/map?cafe=${shop.slug}`)}
+              />
             ))}
           </div>
         )}

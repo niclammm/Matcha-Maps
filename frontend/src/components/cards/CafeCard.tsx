@@ -1,7 +1,6 @@
 import type { MergedShop, Shop } from "@/lib/types";
 import Link from "next/link";
-import { SaveCafeButton } from "@/components/save/SaveCafeButton";
-import { MarkTriedButton } from "@/components/tried/MarkTriedButton";
+import { CafeStatusButton } from "@/components/status/CafeStatusButton";
 import { reviewCountOf } from "@/lib/cafe-helpers";
 
 type CafeCardProps = {
@@ -9,10 +8,9 @@ type CafeCardProps = {
   selected?: boolean;
   onSelect?: () => void;
   variant?: "default" | "grid" | "rail";
-  /** Which quick-toggle button the card shows. Defaults to the Wish List
-   * toggle; pass "tried" on surfaces scoped to the Tasted bucket so the
-   * card can be un-marked without opening the drawer. */
-  action?: "save" | "tried";
+  /** Fires after this card's status button moves the cafe from Wish List to
+   * Tasted, so the page can open a drawer/note editor for photos & comments. */
+  onMarkedTasted?: () => void;
 };
 
 function priceLabel(tier: Shop["priceTier"]) {
@@ -38,13 +36,7 @@ function RatingDisplay({ rating }: { rating?: number }) {
   );
 }
 
-export function CafeCard({
-  shop,
-  selected = false,
-  onSelect,
-  variant = "default",
-  action = "save",
-}: CafeCardProps) {
+export function CafeCard({ shop, selected = false, onSelect, variant = "default", onMarkedTasted }: CafeCardProps) {
   const isGrid = variant === "grid";
   const isRail = variant === "rail";
 
@@ -73,11 +65,13 @@ export function CafeCard({
             {shop.signatureDrink && <p className="cafe-card-rail-dish">{shop.signatureDrink}</p>}
           </div>
         </button>
-        {action === "tried" ? (
-          <MarkTriedButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-rail-save" />
-        ) : (
-          <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-rail-save" />
-        )}
+        <CafeStatusButton
+          slug={shop.slug}
+          cafeName={shop.name}
+          size="sm"
+          className="cafe-card-rail-save"
+          onMarkedTasted={onMarkedTasted}
+        />
       </article>
     );
   }
@@ -96,11 +90,13 @@ export function CafeCard({
           <span className="cafe-area">{shop.area}</span>
           <div className="cafe-card-top-end">
             <span className="cafe-price">{priceLabel(shop.priceTier)}</span>
-            {action === "tried" ? (
-              <MarkTriedButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-save" />
-            ) : (
-              <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-save" />
-            )}
+            <CafeStatusButton
+              slug={shop.slug}
+              cafeName={shop.name}
+              size="sm"
+              className="cafe-card-save"
+              onMarkedTasted={onMarkedTasted}
+            />
           </div>
         </div>
 

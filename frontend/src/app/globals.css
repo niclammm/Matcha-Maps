@@ -1197,8 +1197,10 @@ a.btn {
   color: rgba(250, 249, 244, 0.75);
 }
 
-.rank-card-compact:nth-child(3) .rank-card-save.save-cafe-btn--saved,
-.rank-card-compact:nth-child(4) .rank-card-save.save-cafe-btn--saved {
+.rank-card-compact:nth-child(3) .rank-card-save.cafe-status-btn--wishlisted,
+.rank-card-compact:nth-child(3) .rank-card-save.cafe-status-btn--tasted,
+.rank-card-compact:nth-child(4) .rank-card-save.cafe-status-btn--wishlisted,
+.rank-card-compact:nth-child(4) .rank-card-save.cafe-status-btn--tasted {
   color: var(--cream);
 }
 
@@ -1375,18 +1377,14 @@ a.btn {
     animation: none;
   }
 
-  .save-cafe-btn--cheers {
-    animation: none !important;
-  }
-
-  .tried-cafe-btn--cheers {
+  .cafe-status-btn--cheers {
     animation: none !important;
   }
 }
 
-/* ---------- Save to Wish List ---------- */
+/* ---------- Cafe status (Wish List <-> Tasted, single button) ---------- */
 
-.save-cafe-btn {
+.cafe-status-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1399,90 +1397,47 @@ a.btn {
   transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
-.save-cafe-btn:hover {
+.cafe-status-btn:hover {
   color: var(--warm-brown);
   background: rgba(107, 88, 72, 0.06);
 }
 
-.save-cafe-btn--saved {
+.cafe-status-btn--wishlisted {
   color: var(--matcha-dark);
 }
 
-.save-cafe-btn--saved:hover {
+.cafe-status-btn--wishlisted:hover {
   color: var(--matcha);
 }
 
-.save-cafe-btn--sm {
+.cafe-status-btn--tasted {
+  color: var(--gold);
+}
+
+.cafe-status-btn--tasted:hover {
+  color: var(--gold);
+}
+
+.cafe-status-btn--sm {
   padding: 4px;
 }
 
-.save-cafe-btn--sm .matcha-glass-icon {
+.cafe-status-btn--sm .matcha-glass-icon {
   width: 22px;
   height: 28px;
 }
 
-.save-cafe-btn--md .matcha-glass-icon {
+.cafe-status-btn--md .matcha-glass-icon {
   width: 26px;
   height: 32px;
 }
 
-.save-cafe-btn-label {
+.cafe-status-btn-label {
   font-size: 13px;
   font-weight: 500;
 }
 
-.save-cafe-btn--cheers {
-  animation: matcha-cheers 0.42s ease;
-}
-
-/* ---------- Mark as Tasted ---------- */
-
-.tried-cafe-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--brown-light);
-  cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-}
-
-.tried-cafe-btn:hover {
-  color: var(--warm-brown);
-  background: rgba(107, 88, 72, 0.06);
-}
-
-.tried-cafe-btn--tried {
-  color: var(--gold);
-}
-
-.tried-cafe-btn--tried:hover {
-  color: var(--gold);
-}
-
-.tried-cafe-btn--sm {
-  padding: 4px;
-}
-
-.tried-cafe-btn--sm .matcha-glass-icon {
-  width: 22px;
-  height: 28px;
-}
-
-.tried-cafe-btn--md .matcha-glass-icon {
-  width: 26px;
-  height: 32px;
-}
-
-.tried-cafe-btn-label {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.tried-cafe-btn--cheers {
+.cafe-status-btn--cheers {
   animation: matcha-cheers 0.42s ease;
 }
 
@@ -2346,13 +2301,6 @@ a.btn {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-}
-
-.cafe-drawer-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: none;
 }
 
 .cafe-drawer-eyebrow {

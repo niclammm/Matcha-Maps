@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CafeCard } from "@/components/cards/CafeCard";
 import { CafeDrawer } from "@/components/map/CafeDrawer";
@@ -19,9 +19,33 @@ export default function MapPageClient() {
   const searchParams = useSearchParams();
   const initialSlug = searchParams.get("cafe");
   const { cafes, hydrated: cafesHydrated } = useCafes();
-  const { savedSlugs, hydrated: savedHydrated } = useSavedCafes();
-  const { triedSlugs, triedCafes, hydrated: triedHydrated } = useTriedCafes();
+  const { savedSlugs, isSaved, toggleSave, hydrated: savedHydrated } = useSavedCafes();
+  const { triedSlugs, triedCafes, isTried, toggleTried, setTriedNote, hydrated: triedHydrated } = useTriedCafes();
   const hydrated = cafesHydrated && savedHydrated && triedHydrated;
+
+  // One-time demo seed for local preview only -- visiting /map?seed=demo
+  // wishlists the 3 real spots and adds 3 clearly-labeled dummy "tasted"
+  // entries with sample notes, so the buckets aren't empty when showing the
+  // feature off. Never fires without the explicit query param.
+  useEffect(() => {
+    if (searchParams.get("seed") !== "demo" || !hydrated) return;
+
+    const wishlistSeed = ["scarpetta", "huevos", "pasta-bar-the-original"];
+    wishlistSeed.forEach((slug) => {
+      if (!isSaved(slug)) toggleSave(slug);
+    });
+
+    const tastedSeed: { slug: string; rating: number; comment: string }[] = [
+      { slug: "the-green-table-demo", rating: 4, comment: "Cozy neighborhood spot, great for a weeknight dinner." },
+      { slug: "wok-and-roll-demo", rating: 4.5, comment: "The salted egg prawns are worth the trip alone." },
+      { slug: "nonnas-kitchen-demo", rating: 3.5, comment: "Good risotto, a bit pricey for the portion." },
+    ];
+    tastedSeed.forEach(({ slug, rating, comment }) => {
+      if (!isTried(slug)) toggleTried(slug);
+      setTriedNote(slug, { rating, comment });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, hydrated]);
 
   const [bucket, setBucket] = useState<Bucket>("wishlist");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(initialSlug);

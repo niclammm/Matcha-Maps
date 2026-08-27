@@ -151,6 +151,48 @@ export const cafes: Shop[] = [
     },
     googleMapsUrl: "https://maps.app.goo.gl/fLMMCFUehfXLBsAr6",
   },
+  {
+    id: "9",
+    slug: "the-green-table-demo",
+    name: "The Green Table (Demo)",
+    area: "Novena",
+    reviewCount: 0,
+    signatureDrink: "Roast chicken",
+    priceTier: 2,
+    location: {
+      lat: 1.3204,
+      lng: 103.8437,
+      address: "Placeholder address, Singapore",
+    },
+  },
+  {
+    id: "10",
+    slug: "wok-and-roll-demo",
+    name: "Wok & Roll (Demo)",
+    area: "Clarke Quay",
+    reviewCount: 0,
+    signatureDrink: "Salted egg prawns",
+    priceTier: 2,
+    location: {
+      lat: 1.2884,
+      lng: 103.847,
+      address: "Placeholder address, Singapore",
+    },
+  },
+  {
+    id: "11",
+    slug: "nonnas-kitchen-demo",
+    name: "Nonna's Kitchen (Demo)",
+    area: "Holland Village",
+    reviewCount: 0,
+    signatureDrink: "Truffle risotto",
+    priceTier: 3,
+    location: {
+      lat: 1.3113,
+      lng: 103.7963,
+      address: "Placeholder address, Singapore",
+    },
+  },
 ];
 
 export function getTopRanked(limit = 3): Shop[] {

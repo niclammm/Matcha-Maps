@@ -983,9 +983,9 @@ a.btn {
 }
 
 
-/* Centre placeholder — swap for illustration in public/illustrations/ */
+/* Centre hero button — opens the add-restaurant flow from the homepage */
 
-.matcha-hero-placeholder {
+.hero-add-btn {
   position: absolute;
   z-index: 3;
   top: 50%;
@@ -1000,10 +1000,13 @@ a.btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
+  /* .hero-stage sets pointer-events: none so its decorative photo ring
+     never blocks clicks -- re-enable it here since this is the one
+     interactive thing in that stage. */
+  pointer-events: auto;
 }
 
-.matcha-hero-placeholder-inner {
+.hero-add-btn-inner {
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -1016,26 +1019,30 @@ a.btn {
   gap: 12px;
   padding: 24px;
   text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 
-.matcha-hero-placeholder-icon {
+.hero-add-btn-inner:hover,
+.hero-add-btn-inner:focus-visible {
+  border-style: solid;
+  border-color: var(--matcha);
+  background: rgba(120, 155, 98, 0.08);
+  transform: scale(1.03);
+}
+
+.hero-add-btn-icon {
   width: clamp(32px, 22%, 48px);
   height: clamp(32px, 22%, 48px);
-  color: var(--brown-light);
-  opacity: 0.6;
+  color: var(--matcha-dark);
 }
 
-.matcha-hero-placeholder-label {
+.hero-add-btn-label {
   margin: 0;
-  font-family: monospace;
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
   color: var(--brown-light);
-  text-transform: lowercase;
-}
-
-.matcha-hero-placeholder-label span {
-  opacity: 0.75;
 }
 
 @keyframes doodle-wiggle {
@@ -2261,6 +2268,9 @@ a.btn {
   z-index: 40;
   overflow-y: auto;
   animation: cafe-drawer-in 0.25s ease;
+  /* pointer-events is inherited -- belt-and-suspenders against ever being
+     rendered under an ancestor (like .hero-stage) that turns it off. */
+  pointer-events: auto;
 }
 
 @keyframes cafe-drawer-in {

@@ -47,6 +47,8 @@ function isValidShop(value: unknown): value is Shop {
     (v.rating === undefined || typeof v.rating === "number") &&
     typeof v.reviewCount === "number" &&
     typeof v.signatureDrink === "string" &&
+    (v.cuisine === undefined || typeof v.cuisine === "string") &&
+    (v.notes === undefined || typeof v.notes === "string") &&
     (v.priceTier === 1 || v.priceTier === 2 || v.priceTier === 3) &&
     !!loc &&
     typeof loc.lat === "number" &&

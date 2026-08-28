@@ -25,6 +25,12 @@ export type Shop = {
   rating?: number;
   reviewCount: number;
   signatureDrink: string;
+  /** e.g. "Italian", "Mexican" -- distinct from signatureDrink, which is a
+   * specific dish rather than a style of food. */
+  cuisine?: string;
+  /** A free-text note about why it's on the list, added at wishlist time --
+   * distinct from the personal post-visit rating/comment in TriedNote. */
+  notes?: string;
   priceTier: 1 | 2 | 3;
   location: {
     lat: number;

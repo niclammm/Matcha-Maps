@@ -56,7 +56,10 @@ export function CafeCard({ shop, selected = false, onSelect, variant = "default"
           <div className="cafe-card-rail-body">
             <div className="cafe-card-rail-top">
               <span className="rank-badge">{shop.rank ? `#${shop.rank}` : "On the list"}</span>
-              <span className="rank-area">{shop.area}</span>
+              <span className="rank-area">
+                {shop.cuisine ? `${shop.cuisine} · ` : ""}
+                {shop.area}
+              </span>
             </div>
             <h3 className="cafe-card-rail-name">{shop.name}</h3>
             <div className="cafe-card-rail-rating">
@@ -87,7 +90,10 @@ export function CafeCard({ shop, selected = false, onSelect, variant = "default"
 
       <div className="cafe-card-header">
         <div className="cafe-card-top">
-          <span className="cafe-area">{shop.area}</span>
+          <span className="cafe-area">
+            {shop.cuisine ? `${shop.cuisine} · ` : ""}
+            {shop.area}
+          </span>
           <div className="cafe-card-top-end">
             <span className="cafe-price">{priceLabel(shop.priceTier)}</span>
             <CafeStatusButton

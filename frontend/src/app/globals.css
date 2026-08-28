@@ -2461,6 +2461,23 @@ a.btn {
   font-size: 13px;
 }
 
+.cafe-drawer-extracting {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.cafe-drawer-reveal-coords {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--warm-brown);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .cafe-drawer-field {
   display: flex;
   flex-direction: column;

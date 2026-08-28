@@ -119,6 +119,12 @@ export default function MapPageClient() {
   }
 
   function handleSaved(shop: MergedShop) {
+    // A newly added restaurant always lands on the Wish List -- there's no
+    // "add straight to Tasted" path, since you can't have tasted something
+    // you're only just now entering into the app. Gated to "add" specifically
+    // since this same handler also fires on "edit" saves, and a Tasted cafe
+    // being edited must not get silently re-added to the Wish List too.
+    if (drawer?.mode === "add" && !isSaved(shop.slug)) toggleSave(shop.slug);
     setSelectedSlug(shop.slug);
     setDrawer({ mode: "view", slug: shop.slug });
   }
@@ -201,9 +207,11 @@ export default function MapPageClient() {
             <aside className="rail">
               <div className="rail-head">
                 <p className="rail-label">Top ranked</p>
-                <button type="button" className="btn btn-primary rail-add" onClick={openAdd}>
-                  + Add restaurant
-                </button>
+                {bucket === "wishlist" && (
+                  <button type="button" className="btn btn-primary rail-add" onClick={openAdd}>
+                    + Add restaurant
+                  </button>
+                )}
               </div>
 
               {hydrated && sortedCafes.length === 0 ? (

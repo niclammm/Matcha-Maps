@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { HeroMatchaVisual } from "@/components/home/HeroMatchaVisual";
+import { HeroAddButton } from "@/components/home/HeroAddButton";
 import { DoodleStar } from "@/components/doodles/Doodles";
 
 /** Sizes are % of .hero-stage — scales on laptop and monitor alike */
@@ -78,7 +78,7 @@ export function HeroStage() {
 
       <DoodleStar className="hero-doodle hero-doodle-star hero-doodle-star-left" />
       <DoodleStar className="hero-doodle hero-doodle-star hero-doodle-star-right" />
-      <HeroMatchaVisual />
+      <HeroAddButton />
     </div>
   );
 }

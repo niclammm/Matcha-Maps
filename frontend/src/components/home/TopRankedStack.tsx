@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Shop } from "@/lib/types";
 import { DoodleCat, DoodleCrown, DoodleRibbon } from "@/components/doodles/Doodles";
-import { SaveCafeButton } from "@/components/save/SaveCafeButton";
+import { CafeStatusButton } from "@/components/status/CafeStatusButton";
 import type { ReactNode } from "react";
 
 type RankCardCompactProps = {
@@ -16,6 +19,8 @@ function starsForRating(rating: number): string {
 }
 
 export function RankCardCompact({ shop, doodle, doodleClass }: RankCardCompactProps) {
+  const router = useRouter();
+
   return (
     <article className="rank-card-compact">
       {doodle && <div className={`rank-card-doodle ${doodleClass ?? ""}`}>{doodle}</div>}
@@ -27,16 +32,22 @@ export function RankCardCompact({ shop, doodle, doodleClass }: RankCardCompactPr
         <h3 className="rank-name-compact">{shop.name}</h3>
         <div className="rank-rating rank-rating-compact">
           <span className="stars" aria-hidden="true">
-            {starsForRating(shop.rating)}
+            {starsForRating(shop.rating ?? 0)}
           </span>
-          <span className="rank-count">{shop.rating.toFixed(1)}</span>
+          <span className="rank-count">{(shop.rating ?? 0).toFixed(1)}</span>
         </div>
         <p className="rank-dish-compact">{shop.signatureDrink}</p>
         <Link href={`/map?cafe=${shop.slug}`} className="btn btn-primary btn-compact">
           View
         </Link>
       </div>
-      <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="rank-card-save" />
+      <CafeStatusButton
+        slug={shop.slug}
+        cafeName={shop.name}
+        size="sm"
+        className="rank-card-save"
+        onMarkedTasted={() => router.push(`/map?cafe=${shop.slug}`)}
+      />
     </article>
   );
 }

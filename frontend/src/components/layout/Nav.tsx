@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 type NavProps = {
-  active?: "cafes" | "rankings" | "reviews" | "list";
+  active?: "map" | "wishlist" | "tasted";
 };
 
 export function Nav({ active }: NavProps) {
@@ -34,17 +34,14 @@ export function Nav({ active }: NavProps) {
       </button>
 
       <div className={`nav-links${open ? " open" : ""}`} id="navLinks">
-        <Link href="/map" className={active === "cafes" ? "active" : undefined} onClick={closeMenu}>
-          Cafes
+        <Link href="/map" className={active === "map" ? "active" : undefined} onClick={closeMenu}>
+          Map
         </Link>
-        <Link href="/list" className={active === "list" ? "active" : undefined} onClick={closeMenu}>
-          My List
+        <Link href="/list" className={active === "wishlist" ? "active" : undefined} onClick={closeMenu}>
+          Wish List
         </Link>
-        <Link href="/rankings" className={active === "rankings" ? "active" : undefined} onClick={closeMenu}>
-          Rankings
-        </Link>
-        <Link href="/reviews" className={active === "reviews" ? "active" : undefined} onClick={closeMenu}>
-          Reviews
+        <Link href="/tasted" className={active === "tasted" ? "active" : undefined} onClick={closeMenu}>
+          Tasted
         </Link>
       </div>
 

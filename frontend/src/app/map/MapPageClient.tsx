@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CafeCard } from "@/components/cards/CafeCard";
 import { CafeDrawer } from "@/components/map/CafeDrawer";
@@ -8,15 +8,46 @@ import { ScrapbookMap } from "@/components/map/ScrapbookMap";
 import { Nav } from "@/components/layout/Nav";
 import { Topbar } from "@/components/layout/Topbar";
 import { useCafes } from "@/components/providers/CafesProvider";
+import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
+import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
 import type { MergedShop } from "@/lib/types";
 
 type DrawerState = { mode: "view" | "add" | "edit"; slug: string | null };
+type Bucket = "wishlist" | "tasted";
 
 export default function MapPageClient() {
   const searchParams = useSearchParams();
   const initialSlug = searchParams.get("cafe");
-  const { cafes, hydrated } = useCafes();
+  const { cafes, hydrated: cafesHydrated } = useCafes();
+  const { savedSlugs, isSaved, toggleSave, hydrated: savedHydrated } = useSavedCafes();
+  const { triedSlugs, triedCafes, isTried, toggleTried, setTriedNote, hydrated: triedHydrated } = useTriedCafes();
+  const hydrated = cafesHydrated && savedHydrated && triedHydrated;
 
+  // One-time demo seed for local preview only -- visiting /map?seed=demo
+  // wishlists the 3 real spots and adds 3 clearly-labeled dummy "tasted"
+  // entries with sample notes, so the buckets aren't empty when showing the
+  // feature off. Never fires without the explicit query param.
+  useEffect(() => {
+    if (searchParams.get("seed") !== "demo" || !hydrated) return;
+
+    const wishlistSeed = ["scarpetta", "huevos", "pasta-bar-the-original"];
+    wishlistSeed.forEach((slug) => {
+      if (!isSaved(slug)) toggleSave(slug);
+    });
+
+    const tastedSeed: { slug: string; rating: number; comment: string }[] = [
+      { slug: "the-green-table-demo", rating: 4, comment: "Cozy neighborhood spot, great for a weeknight dinner." },
+      { slug: "wok-and-roll-demo", rating: 4.5, comment: "The salted egg prawns are worth the trip alone." },
+      { slug: "nonnas-kitchen-demo", rating: 3.5, comment: "Good risotto, a bit pricey for the portion." },
+    ];
+    tastedSeed.forEach(({ slug, rating, comment }) => {
+      if (!isTried(slug)) toggleTried(slug);
+      setTriedNote(slug, { rating, comment, photos: [] });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, hydrated]);
+
+  const [bucket, setBucket] = useState<Bucket>("wishlist");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(initialSlug);
   const [drawer, setDrawer] = useState<DrawerState | null>(
     initialSlug ? { mode: "view", slug: initialSlug } : null,
@@ -24,9 +55,17 @@ export default function MapPageClient() {
   const [query, setQuery] = useState("");
   const [areaFilter, setAreaFilter] = useState<string | null>(null);
 
+  const bucketSlugSet = useMemo(
+    () => new Set(bucket === "wishlist" ? savedSlugs : triedSlugs),
+    [bucket, savedSlugs, triedSlugs],
+  );
+
   const sortedCafes = useMemo(
-    () => [...cafes].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || b.rating - a.rating),
-    [cafes],
+    () =>
+      cafes
+        .filter((c) => bucketSlugSet.has(c.slug))
+        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || (b.rating ?? 0) - (a.rating ?? 0)),
+    [cafes, bucketSlugSet],
   );
 
   const areas = useMemo(() => Array.from(new Set(sortedCafes.map((c) => c.area))), [sortedCafes]);
@@ -49,9 +88,13 @@ export default function MapPageClient() {
   );
 
   const averageRating = useMemo(() => {
-    if (sortedCafes.length === 0) return 0;
-    return sortedCafes.reduce((sum, c) => sum + c.rating, 0) / sortedCafes.length;
-  }, [sortedCafes]);
+    if (bucket !== "tasted") return null;
+    const rated = sortedCafes
+      .map((c) => triedCafes[c.slug]?.rating)
+      .filter((r): r is number => r != null);
+    if (rated.length === 0) return null;
+    return rated.reduce((sum, r) => sum + r, 0) / rated.length;
+  }, [bucket, sortedCafes, triedCafes]);
 
   const drawerShop: MergedShop | null = drawer?.slug
     ? (cafes.find((c) => c.slug === drawer.slug) ?? null)
@@ -76,6 +119,12 @@ export default function MapPageClient() {
   }
 
   function handleSaved(shop: MergedShop) {
+    // A newly added restaurant always lands on the Wish List -- there's no
+    // "add straight to Tasted" path, since you can't have tasted something
+    // you're only just now entering into the app. Gated to "add" specifically
+    // since this same handler also fires on "edit" saves, and a Tasted cafe
+    // being edited must not get silently re-added to the Wish List too.
+    if (drawer?.mode === "add" && !isSaved(shop.slug)) toggleSave(shop.slug);
     setSelectedSlug(shop.slug);
     setDrawer({ mode: "view", slug: shop.slug });
   }
@@ -89,14 +138,21 @@ export default function MapPageClient() {
     setAreaFilter((prev) => (prev === area ? null : area));
   }
 
+  function switchBucket(next: Bucket) {
+    setBucket(next);
+    setAreaFilter(null);
+    setQuery("");
+  }
+
   const shownCount = visibleSlugs.size;
+  const bucketLabel = bucket === "wishlist" ? "wish list" : "tasted";
 
   return (
     <>
       <Topbar />
       <main className="map-page">
         <div className="map-frame">
-          <Nav active="cafes" />
+          <Nav active="map" />
 
           <div className="map-head">
             <h1>
@@ -107,11 +163,31 @@ export default function MapPageClient() {
             <div className="map-head-meta">
               <span>
                 {hydrated
-                  ? `${shownCount} matcha spot${shownCount === 1 ? "" : "s"} in Singapore`
+                  ? `${shownCount} ${shownCount === 1 ? "spot" : "spots"} on your ${bucketLabel}`
                   : "Loading cafes…"}
               </span>
-              <span className="stat-sep" aria-hidden="true" />
-              <span>★ {averageRating.toFixed(1)} average rating</span>
+              {bucket === "tasted" && averageRating != null && (
+                <>
+                  <span className="stat-sep" aria-hidden="true" />
+                  <span>★ {averageRating.toFixed(1)} average rating</span>
+                </>
+              )}
+            </div>
+            <div className="chips map-bucket-toggle" role="group" aria-label="Show">
+              <button
+                type="button"
+                className={`chip${bucket === "wishlist" ? " is-on" : ""}`}
+                onClick={() => switchBucket("wishlist")}
+              >
+                Wish List
+              </button>
+              <button
+                type="button"
+                className={`chip${bucket === "tasted" ? " is-on" : ""}`}
+                onClick={() => switchBucket("tasted")}
+              >
+                Tasted
+              </button>
             </div>
           </div>
 
@@ -131,33 +207,49 @@ export default function MapPageClient() {
             <aside className="rail">
               <div className="rail-head">
                 <p className="rail-label">Top ranked</p>
-                <button type="button" className="btn btn-primary rail-add" onClick={openAdd}>
-                  + Add cafe
-                </button>
+                {bucket === "wishlist" && (
+                  <button type="button" className="btn btn-primary rail-add" onClick={openAdd}>
+                    + Add restaurant
+                  </button>
+                )}
               </div>
 
-              <div className="rail-track">
-                {sortedCafes
-                  .filter((cafe) => visibleSlugs.has(cafe.slug))
-                  .map((cafe) => (
-                    <CafeCard
-                      key={cafe.id}
-                      shop={cafe}
-                      variant="rail"
-                      selected={selectedSlug === cafe.slug}
-                      onSelect={() => openView(cafe.slug)}
-                    />
-                  ))}
-              </div>
+              {hydrated && sortedCafes.length === 0 ? (
+                <div className="rail-empty">
+                  <p className="rail-empty-title">
+                    {bucket === "wishlist" ? "Your wish list is empty." : "You haven't tasted any cafes yet."}
+                  </p>
+                  <p className="rail-empty-body">
+                    {bucket === "wishlist"
+                      ? "Open a cafe and tap the glass icon to add it to your wish list."
+                      : "Open a cafe and mark it tasted once you've tried it."}
+                  </p>
+                </div>
+              ) : (
+                <div className="rail-track">
+                  {sortedCafes
+                    .filter((cafe) => visibleSlugs.has(cafe.slug))
+                    .map((cafe) => (
+                      <CafeCard
+                        key={cafe.id}
+                        shop={cafe}
+                        variant="rail"
+                        selected={selectedSlug === cafe.slug}
+                        onSelect={() => openView(cafe.slug)}
+                        onMarkedTasted={() => openView(cafe.slug)}
+                      />
+                    ))}
+                </div>
+              )}
 
               <div className="rail-foot">
                 <span className="legend-item">
                   <span className="legend-swatch" style={{ background: "var(--matcha)" }} />
-                  Tasted &amp; rated
+                  Ranked pick
                 </span>
                 <span className="legend-item">
                   <span className="legend-swatch" style={{ background: "var(--brown-tan)" }} />
-                  On the list
+                  Community favorite
                 </span>
               </div>
             </aside>

@@ -21,10 +21,10 @@ export function RankCard({ shop, floating = true }: RankCardProps) {
       <h3 className="rank-name">{shop.name}</h3>
       <div className="rank-rating">
         <span className="stars" aria-hidden="true">
-          {starsForRating(shop.rating)}
+          {starsForRating(shop.rating ?? 0)}
         </span>
         <span className="rank-count">
-          {shop.rating.toFixed(1)} · {shop.reviewCount} reviews
+          {(shop.rating ?? 0).toFixed(1)} · {shop.reviewCount} reviews
         </span>
       </div>
       <div className="rank-footer">

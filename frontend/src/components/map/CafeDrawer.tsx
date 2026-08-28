@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import type { CafeReview, MergedShop, NewCafeInput } from "@/lib/types";
 import { useCafes } from "@/components/providers/CafesProvider";
-import { SaveCafeButton } from "@/components/save/SaveCafeButton";
+import { CafeStatusButton } from "@/components/status/CafeStatusButton";
+import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
 import {
   dataUrlBytes,
+  extractPlaceInfoFromGoogleMapsUrl,
   fileToDataUrl,
-  parseLatLngFromGoogleMapsUrl,
+  resolveGoogleMapsLink,
   reviewCountOf,
 } from "@/lib/cafe-helpers";
 import { isWithinSingapore } from "@/lib/geo";
@@ -33,6 +35,8 @@ type FormState = {
   priceTier: 1 | 2 | 3;
   rating: string;
   signatureDrink: string;
+  cuisine: string;
+  notes: string;
   popularDishes: string[];
   photos: string[];
   reviews: CafeReview[];
@@ -57,8 +61,10 @@ function emptyForm(): FormState {
     lng: "",
     googleMapsUrl: "",
     priceTier: 2,
-    rating: "4.5",
+    rating: "",
     signatureDrink: "",
+    cuisine: "",
+    notes: "",
     popularDishes: [],
     photos: [],
     reviews: [],
@@ -76,8 +82,10 @@ function shopToForm(shop: MergedShop): FormState {
     lng: String(shop.location.lng),
     googleMapsUrl: shop.googleMapsUrl ?? "",
     priceTier: shop.priceTier,
-    rating: String(shop.rating),
+    rating: shop.rating != null ? String(shop.rating) : "",
     signatureDrink: shop.signatureDrink,
+    cuisine: shop.cuisine ?? "",
+    notes: shop.notes ?? "",
     popularDishes: shop.popularDishes ?? [],
     photos: shop.photos ?? [],
     reviews: shop.reviews ?? [],
@@ -88,12 +96,28 @@ function shopToForm(shop: MergedShop): FormState {
 
 export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemoved }: CafeDrawerProps) {
   const { addCafe, updateCafe, removeCafe } = useCafes();
+  const { isTried, getTriedNote, setTriedNote, hydrated: triedHydrated } = useTriedCafes();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [dishInput, setDishInput] = useState("");
   const [newReview, setNewReview] = useState({ author: "", text: "", rating: "" });
+  const [noteDraft, setNoteDraft] = useState<{ rating: string; comment: string; photos: string[] }>({
+    rating: "",
+    comment: "",
+    photos: [],
+  });
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
+  const [extracting, setExtracting] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  // Tracks which fields still hold a Google-Maps-link auto-fill rather than
+  // something the user typed themselves, so re-pasting a corrected link can
+  // overwrite a previous (wrong) auto-fill without ever clobbering a value
+  // the user deliberately entered by hand.
+  const autoFilledFieldsRef = useRef<Set<"name" | "cuisine" | "address" | "lat" | "lng">>(new Set());
+  // Bumped on every extraction attempt so a slow (short-link) resolution
+  // that's since been superseded by a newer paste can detect it's stale and
+  // no-op instead of overwriting more recent data.
+  const extractRequestIdRef = useRef(0);
 
   // This is a non-modal panel (the map stays interactive behind it), so it
   // doesn't get a focus trap -- just move focus in when it appears, since
@@ -109,7 +133,21 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     setWarning(null);
     setDishInput("");
     setNewReview({ author: "", text: "", rating: "" });
-  }, [mode, shop]);
+    autoFilledFieldsRef.current.clear();
+    extractRequestIdRef.current += 1;
+    if (mode === "view" && shop) {
+      // Deliberately re-synced only when the drawer switches cafes/modes (or
+      // tried-cafes finishes its one-time load from storage), not on every
+      // tried-cafes change -- otherwise editing elsewhere while this note is
+      // mid-edit would stomp on unsaved keystrokes. Without the `triedHydrated`
+      // dependency, a hard refresh landing directly on /map?cafe=<slug> could
+      // read the note before TriedCafesProvider finishes hydrating and seed
+      // this draft blank, silently erasing a real note on the next blur.
+      const note = getTriedNote(shop.slug);
+      setNoteDraft({ rating: note.rating != null ? String(note.rating) : "", comment: note.comment, photos: note.photos });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, shop, triedHydrated]);
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
@@ -171,11 +209,103 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     }
   }
 
-  function handleGoogleMapsBlur() {
-    const parsed = parseLatLngFromGoogleMapsUrl(form.googleMapsUrl);
-    if (parsed) {
-      setForm((f) => ({ ...f, lat: String(parsed.lat), lng: String(parsed.lng) }));
+  function commitTastedNote(photosOverride?: string[]) {
+    if (!shop) return;
+    const trimmed = noteDraft.rating.trim();
+    const rating = trimmed === "" ? null : Math.min(5, Math.max(0, Number(trimmed) || 0));
+    setTriedNote(shop.slug, { rating, comment: noteDraft.comment, photos: photosOverride ?? noteDraft.photos });
+  }
+
+  async function handleNotePhotosSelected(e: ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const added: string[] = [];
+    for (const file of Array.from(files)) {
+      try {
+        added.push(await fileToDataUrl(file));
+      } catch {
+        // skip files that fail to decode, keep the rest
+      }
     }
+    e.target.value = "";
+    const nextPhotos = [...noteDraft.photos, ...added];
+    setNoteDraft((d) => ({ ...d, photos: nextPhotos }));
+    // No blur event fires for a file picker, so commit immediately.
+    commitTastedNote(nextPhotos);
+
+    const totalBytes = nextPhotos.reduce((sum, p) => sum + dataUrlBytes(p), 0);
+    if (totalBytes > MAX_PHOTO_BYTES_WARN) {
+      setWarning("These photos are getting large -- if saving fails, remove one and try again.");
+    }
+  }
+
+  function removeNotePhoto(index: number) {
+    const nextPhotos = noteDraft.photos.filter((_, i) => i !== index);
+    setNoteDraft((d) => ({ ...d, photos: nextPhotos }));
+    commitTastedNote(nextPhotos);
+  }
+
+  /** Fills `field` from an extraction result unless the user has since typed
+   * something of their own into it -- an empty field is always fair game,
+   * and a still-auto-filled one gets overwritten too (so re-pasting a
+   * corrected link can fix a wrong guess), but a value the user actually
+   * edited is never touched. */
+  function shouldAutoFill(field: "name" | "cuisine" | "address" | "lat" | "lng", currentValue: string): boolean {
+    return currentValue.trim() === "" || autoFilledFieldsRef.current.has(field);
+  }
+
+  async function handleGoogleMapsBlur() {
+    const url = form.googleMapsUrl.trim();
+    if (!url) return;
+
+    const requestId = ++extractRequestIdRef.current;
+    setExtracting(true);
+    setWarning(null);
+    try {
+      const resolvedUrl = await resolveGoogleMapsLink(url);
+      // A newer paste/blur has started since this one kicked off -- let that
+      // one win instead of clobbering it with this stale result.
+      if (requestId !== extractRequestIdRef.current) return;
+
+      const info = extractPlaceInfoFromGoogleMapsUrl(resolvedUrl);
+      setForm((f) => {
+        const next = { ...f, googleMapsUrl: resolvedUrl };
+        if (info.name && shouldAutoFill("name", f.name)) {
+          next.name = info.name;
+          autoFilledFieldsRef.current.add("name");
+        }
+        if (info.cuisine && shouldAutoFill("cuisine", f.cuisine)) {
+          next.cuisine = info.cuisine;
+          autoFilledFieldsRef.current.add("cuisine");
+        }
+        if (info.address && shouldAutoFill("address", f.address)) {
+          next.address = info.address;
+          autoFilledFieldsRef.current.add("address");
+        }
+        if (info.lat != null && shouldAutoFill("lat", f.lat)) {
+          next.lat = String(info.lat);
+          autoFilledFieldsRef.current.add("lat");
+        }
+        if (info.lng != null && shouldAutoFill("lng", f.lng)) {
+          next.lng = String(info.lng);
+          autoFilledFieldsRef.current.add("lng");
+        }
+        return next;
+      });
+      if (info.lat == null || info.lng == null) {
+        setWarning("Couldn't find coordinates in that link -- enter them manually below.");
+      }
+    } finally {
+      if (requestId === extractRequestIdRef.current) setExtracting(false);
+    }
+  }
+
+  /** Brings the (hidden-once-filled) coordinate row back in add mode, e.g.
+   * when an extraction landed on the wrong branch of a chain restaurant. */
+  function revealCoordinateFields() {
+    autoFilledFieldsRef.current.delete("lat");
+    autoFilledFieldsRef.current.delete("lng");
+    setForm((f) => ({ ...f, lat: "", lng: "" }));
   }
 
   function handleDishKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -203,7 +333,8 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
       return;
     }
 
-    const rating = Math.min(5, Math.max(0, Number(form.rating) || 0));
+    const ratingTrimmed = form.rating.trim();
+    const rating = ratingTrimmed === "" ? undefined : Math.min(5, Math.max(0, Number(ratingTrimmed) || 0));
     const flavorTags = form.flavorTagsText
       .split(",")
       .map((t) => t.trim())
@@ -213,7 +344,9 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
       name,
       area,
       rating,
-      signatureDrink: form.signatureDrink.trim() || "Matcha",
+      signatureDrink: form.signatureDrink.trim(),
+      cuisine: form.cuisine.trim() || undefined,
+      notes: form.notes.trim() || undefined,
       priceTier: form.priceTier,
       location: { lat, lng, address: form.address.trim() },
       googleMapsUrl: form.googleMapsUrl.trim() || undefined,
@@ -250,7 +383,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     !isWithinSingapore(latNum, lngNum);
 
   return (
-    <aside className="cafe-drawer" role="complementary" aria-label={mode === "add" ? "Add a cafe" : (shop?.name ?? "Cafe details")}>
+    <aside className="cafe-drawer" role="complementary" aria-label={mode === "add" ? "Add a restaurant" : (shop?.name ?? "Cafe details")}>
       <button
         type="button"
         ref={closeButtonRef}
@@ -266,19 +399,26 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
           <div className="cafe-drawer-header">
             <div>
               <p className="cafe-drawer-eyebrow">
+                {shop.cuisine ? `${shop.cuisine} · ` : ""}
                 {shop.area} · {"$".repeat(shop.priceTier)}
               </p>
               <h2 className="cafe-drawer-name">{shop.name}</h2>
               <div className="cafe-rating">
-                <span className="stars" aria-hidden="true">
-                  {starsForRating(shop.rating)}
-                </span>
-                <span>
-                  {shop.rating.toFixed(1)} · {reviewCountOf(shop)} reviews
-                </span>
+                {shop.rating != null ? (
+                  <>
+                    <span className="stars" aria-hidden="true">
+                      {starsForRating(shop.rating)}
+                    </span>
+                    <span>
+                      {shop.rating.toFixed(1)} · {reviewCountOf(shop)} reviews
+                    </span>
+                  </>
+                ) : (
+                  <span className="cafe-rating-unrated">Not yet rated</span>
+                )}
               </div>
             </div>
-            <SaveCafeButton slug={shop.slug} cafeName={shop.name} />
+            <CafeStatusButton slug={shop.slug} cafeName={shop.name} />
           </div>
 
           {shop.photos && shop.photos.length > 0 && (
@@ -303,10 +443,63 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
             </a>
           )}
 
-          <div className="cafe-drawer-section">
-            <p className="cafe-drawer-section-title">Signature</p>
-            <p>{shop.signatureDrink}</p>
-          </div>
+          {isTried(shop.slug) && (
+            <div className="cafe-drawer-section">
+              <p className="cafe-drawer-section-title">Your tasting note</p>
+              {warning && <p className="cafe-drawer-warning">{warning}</p>}
+              <label className="cafe-drawer-field">
+                <span>Your rating</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={5}
+                  step={0.5}
+                  placeholder="Not yet rated"
+                  value={noteDraft.rating}
+                  onChange={(e) => setNoteDraft((d) => ({ ...d, rating: e.target.value }))}
+                  onBlur={() => commitTastedNote()}
+                />
+              </label>
+              <textarea
+                className="cafe-drawer-note-textarea"
+                placeholder="What did you think?"
+                value={noteDraft.comment}
+                onChange={(e) => setNoteDraft((d) => ({ ...d, comment: e.target.value }))}
+                onBlur={() => commitTastedNote()}
+              />
+              <div className="cafe-drawer-field">
+                <span>Your photos</span>
+                <input type="file" accept="image/*" multiple onChange={handleNotePhotosSelected} />
+                {noteDraft.photos.length > 0 && (
+                  <div className="cafe-drawer-photo-thumbs">
+                    {noteDraft.photos.map((src, i) => (
+                      <div key={i} className="cafe-drawer-photo-thumb">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" />
+                        <button type="button" onClick={() => removeNotePhoto(i)} aria-label="Remove photo">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {shop.notes && (
+            <div className="cafe-drawer-section">
+              <p className="cafe-drawer-section-title">Notes</p>
+              <p>{shop.notes}</p>
+            </div>
+          )}
+
+          {shop.signatureDrink && (
+            <div className="cafe-drawer-section">
+              <p className="cafe-drawer-section-title">Signature</p>
+              <p>{shop.signatureDrink}</p>
+            </div>
+          )}
 
           {shop.popularDishes && shop.popularDishes.length > 0 && (
             <div className="cafe-drawer-section">
@@ -377,24 +570,9 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
         </div>
       ) : (
         <form className="cafe-drawer-content cafe-drawer-form" onSubmit={handleSubmit}>
-          <h2 className="cafe-drawer-name">{mode === "add" ? "Add a cafe" : `Edit ${shop?.name ?? "cafe"}`}</h2>
+          <h2 className="cafe-drawer-name">{mode === "add" ? "Add a restaurant" : `Edit ${shop?.name ?? "restaurant"}`}</h2>
 
           {warning && <p className="cafe-drawer-warning">{warning}</p>}
-
-          <label className="cafe-drawer-field">
-            <span>Name</span>
-            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
-          </label>
-
-          <label className="cafe-drawer-field">
-            <span>Area</span>
-            <input value={form.area} onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))} required />
-          </label>
-
-          <label className="cafe-drawer-field">
-            <span>Address</span>
-            <input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
-          </label>
 
           <label className="cafe-drawer-field">
             <span>Google Maps link</span>
@@ -402,34 +580,81 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
               value={form.googleMapsUrl}
               onChange={(e) => setForm((f) => ({ ...f, googleMapsUrl: e.target.value }))}
               onBlur={handleGoogleMapsBlur}
-              placeholder="Paste a share link to auto-fill lat/lng"
+              placeholder="Paste a share link to fill in name, location & cuisine"
+            />
+            {extracting && <span className="cafe-drawer-extracting">Extracting details…</span>}
+          </label>
+
+          <label className="cafe-drawer-field">
+            <span>Name</span>
+            <input
+              value={form.name}
+              onChange={(e) => {
+                autoFilledFieldsRef.current.delete("name");
+                setForm((f) => ({ ...f, name: e.target.value }));
+              }}
+              required
             />
           </label>
 
-          <div className="cafe-drawer-field-row">
+          <label className="cafe-drawer-field">
+            <span>Area</span>
+            <input value={form.area} onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))} required />
+          </label>
+
+          {mode === "edit" && (
             <label className="cafe-drawer-field">
-              <span>Latitude</span>
+              <span>Address</span>
               <input
-                value={form.lat}
-                onChange={(e) => setForm((f) => ({ ...f, lat: e.target.value }))}
-                inputMode="decimal"
-                required
+                value={form.address}
+                onChange={(e) => {
+                  autoFilledFieldsRef.current.delete("address");
+                  setForm((f) => ({ ...f, address: e.target.value }));
+                }}
               />
             </label>
-            <label className="cafe-drawer-field">
-              <span>Longitude</span>
-              <input
-                value={form.lng}
-                onChange={(e) => setForm((f) => ({ ...f, lng: e.target.value }))}
-                inputMode="decimal"
-                required
-              />
-            </label>
-          </div>
-          {showOobWarning && (
-            <p className="cafe-drawer-warning">
-              These coordinates look like they are outside Singapore -- double check the pin lands where you expect.
-            </p>
+          )}
+
+          {mode === "add" && form.lat.trim() !== "" && form.lng.trim() !== "" && (
+            <button type="button" className="cafe-drawer-reveal-coords" onClick={revealCoordinateFields}>
+              Pin looks wrong? Enter coordinates manually
+            </button>
+          )}
+
+          {(mode === "edit" || form.lat.trim() === "" || form.lng.trim() === "") && (
+            <>
+              <div className="cafe-drawer-field-row">
+                <label className="cafe-drawer-field">
+                  <span>Latitude</span>
+                  <input
+                    value={form.lat}
+                    onChange={(e) => {
+                      autoFilledFieldsRef.current.delete("lat");
+                      setForm((f) => ({ ...f, lat: e.target.value }));
+                    }}
+                    inputMode="decimal"
+                    required
+                  />
+                </label>
+                <label className="cafe-drawer-field">
+                  <span>Longitude</span>
+                  <input
+                    value={form.lng}
+                    onChange={(e) => {
+                      autoFilledFieldsRef.current.delete("lng");
+                      setForm((f) => ({ ...f, lng: e.target.value }));
+                    }}
+                    inputMode="decimal"
+                    required
+                  />
+                </label>
+              </div>
+              {showOobWarning && (
+                <p className="cafe-drawer-warning">
+                  These coordinates look like they are outside Singapore -- double check the pin lands where you expect.
+                </p>
+              )}
+            </>
           )}
 
           <div className="cafe-drawer-field-row">
@@ -445,132 +670,158 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
               </select>
             </label>
             <label className="cafe-drawer-field">
-              <span>Rating</span>
+              <span>Cuisine (optional)</span>
               <input
-                type="number"
-                min={0}
-                max={5}
-                step={0.1}
-                value={form.rating}
-                onChange={(e) => setForm((f) => ({ ...f, rating: e.target.value }))}
+                placeholder="e.g. Italian"
+                value={form.cuisine}
+                onChange={(e) => {
+                  autoFilledFieldsRef.current.delete("cuisine");
+                  setForm((f) => ({ ...f, cuisine: e.target.value }));
+                }}
               />
             </label>
           </div>
 
           <label className="cafe-drawer-field">
-            <span>Signature drink</span>
-            <input
-              value={form.signatureDrink}
-              onChange={(e) => setForm((f) => ({ ...f, signatureDrink: e.target.value }))}
+            <span>Note (optional)</span>
+            <textarea
+              placeholder="Why you want to try it, who recommended it, etc."
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
             />
           </label>
 
-          <div className="cafe-drawer-field">
-            <span>Popular dishes</span>
-            <div className="cafe-drawer-tag-input">
-              <input
-                value={dishInput}
-                onChange={(e) => setDishInput(e.target.value)}
-                onKeyDown={handleDishKeyDown}
-                placeholder="e.g. Matcha tiramisu"
-              />
-              <button type="button" onClick={addDish}>
-                Add
-              </button>
-            </div>
-            {form.popularDishes.length > 0 && (
-              <div className="flavor-tags">
-                {form.popularDishes.map((dish, i) => (
-                  <span key={`${dish}-${i}`} className="flavor-tag cafe-drawer-removable-tag">
-                    {dish}
-                    <button type="button" onClick={() => removeDish(i)} aria-label={`Remove ${dish}`}>
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          {mode === "edit" && (
+            <>
+              <label className="cafe-drawer-field">
+                <span>Rating (optional)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={5}
+                  step={0.1}
+                  placeholder="Not yet rated"
+                  value={form.rating}
+                  onChange={(e) => setForm((f) => ({ ...f, rating: e.target.value }))}
+                />
+              </label>
 
-          <div className="cafe-drawer-field">
-            <span>Photos</span>
-            <input type="file" accept="image/*" multiple onChange={handlePhotosSelected} />
-            {form.photos.length > 0 && (
-              <div className="cafe-drawer-photo-thumbs">
-                {form.photos.map((src, i) => (
-                  <div key={i} className="cafe-drawer-photo-thumb">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt="" />
-                    <button type="button" onClick={() => removePhoto(i)} aria-label="Remove photo">
-                      ×
+              <label className="cafe-drawer-field">
+                <span>Signature dish or drink</span>
+                <input
+                  value={form.signatureDrink}
+                  onChange={(e) => setForm((f) => ({ ...f, signatureDrink: e.target.value }))}
+                />
+              </label>
+
+              <div className="cafe-drawer-field">
+                <span>Popular dishes</span>
+                <div className="cafe-drawer-tag-input">
+                  <input
+                    value={dishInput}
+                    onChange={(e) => setDishInput(e.target.value)}
+                    onKeyDown={handleDishKeyDown}
+                    placeholder="e.g. Matcha tiramisu"
+                  />
+                  <button type="button" onClick={addDish}>
+                    Add
+                  </button>
+                </div>
+                {form.popularDishes.length > 0 && (
+                  <div className="flavor-tags">
+                    {form.popularDishes.map((dish, i) => (
+                      <span key={`${dish}-${i}`} className="flavor-tag cafe-drawer-removable-tag">
+                        {dish}
+                        <button type="button" onClick={() => removeDish(i)} aria-label={`Remove ${dish}`}>
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="cafe-drawer-field">
+                <span>Photos</span>
+                <input type="file" accept="image/*" multiple onChange={handlePhotosSelected} />
+                {form.photos.length > 0 && (
+                  <div className="cafe-drawer-photo-thumbs">
+                    {form.photos.map((src, i) => (
+                      <div key={i} className="cafe-drawer-photo-thumb">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" />
+                        <button type="button" onClick={() => removePhoto(i)} aria-label="Remove photo">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="cafe-drawer-field">
+                <span>Reviews</span>
+                {form.reviews.map((r) => (
+                  <div key={r.id} className="cafe-drawer-review-row">
+                    <strong>{r.author}</strong>
+                    <p>{r.text}</p>
+                    <button type="button" onClick={() => removeReview(r.id)}>
+                      Remove
                     </button>
                   </div>
                 ))}
+                <div className="cafe-drawer-review-form">
+                  <input
+                    placeholder="Author"
+                    value={newReview.author}
+                    onChange={(e) => setNewReview((r) => ({ ...r, author: e.target.value }))}
+                  />
+                  <input
+                    placeholder="Rating (optional)"
+                    type="number"
+                    min={0}
+                    max={5}
+                    step={0.5}
+                    value={newReview.rating}
+                    onChange={(e) => setNewReview((r) => ({ ...r, rating: e.target.value }))}
+                  />
+                  <textarea
+                    placeholder="Notes"
+                    value={newReview.text}
+                    onChange={(e) => setNewReview((r) => ({ ...r, text: e.target.value }))}
+                  />
+                  <button type="button" onClick={addReview}>
+                    Add review
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
 
-          <div className="cafe-drawer-field">
-            <span>Reviews</span>
-            {form.reviews.map((r) => (
-              <div key={r.id} className="cafe-drawer-review-row">
-                <strong>{r.author}</strong>
-                <p>{r.text}</p>
-                <button type="button" onClick={() => removeReview(r.id)}>
-                  Remove
-                </button>
-              </div>
-            ))}
-            <div className="cafe-drawer-review-form">
-              <input
-                placeholder="Author"
-                value={newReview.author}
-                onChange={(e) => setNewReview((r) => ({ ...r, author: e.target.value }))}
-              />
-              <input
-                placeholder="Rating (optional)"
-                type="number"
-                min={0}
-                max={5}
-                step={0.5}
-                value={newReview.rating}
-                onChange={(e) => setNewReview((r) => ({ ...r, rating: e.target.value }))}
-              />
-              <textarea
-                placeholder="Notes"
-                value={newReview.text}
-                onChange={(e) => setNewReview((r) => ({ ...r, text: e.target.value }))}
-              />
-              <button type="button" onClick={addReview}>
-                Add review
-              </button>
-            </div>
-          </div>
-
-          <details className="cafe-drawer-advanced">
-            <summary>Advanced</summary>
-            <label className="cafe-drawer-field">
-              <span>Matcha origin</span>
-              <input
-                value={form.matchaOrigin}
-                onChange={(e) => setForm((f) => ({ ...f, matchaOrigin: e.target.value }))}
-              />
-            </label>
-            <label className="cafe-drawer-field">
-              <span>Flavor tags (comma separated)</span>
-              <input
-                value={form.flavorTagsText}
-                onChange={(e) => setForm((f) => ({ ...f, flavorTagsText: e.target.value }))}
-              />
-            </label>
-          </details>
+              <details className="cafe-drawer-advanced">
+                <summary>Advanced</summary>
+                <label className="cafe-drawer-field">
+                  <span>Matcha origin</span>
+                  <input
+                    value={form.matchaOrigin}
+                    onChange={(e) => setForm((f) => ({ ...f, matchaOrigin: e.target.value }))}
+                  />
+                </label>
+                <label className="cafe-drawer-field">
+                  <span>Flavor tags (comma separated)</span>
+                  <input
+                    value={form.flavorTagsText}
+                    onChange={(e) => setForm((f) => ({ ...f, flavorTagsText: e.target.value }))}
+                  />
+                </label>
+              </details>
+            </>
+          )}
 
           <div className="cafe-drawer-actions">
             <button type="button" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
-              {mode === "add" ? "Add cafe" : "Save changes"}
+            <button type="submit" className="btn btn-primary" disabled={extracting}>
+              {extracting ? "Extracting…" : mode === "add" ? "Add restaurant" : "Save changes"}
             </button>
           </div>
         </form>

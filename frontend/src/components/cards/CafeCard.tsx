@@ -1,6 +1,6 @@
 import type { MergedShop, Shop } from "@/lib/types";
 import Link from "next/link";
-import { SaveCafeButton } from "@/components/save/SaveCafeButton";
+import { CafeStatusButton } from "@/components/status/CafeStatusButton";
 import { reviewCountOf } from "@/lib/cafe-helpers";
 
 type CafeCardProps = {
@@ -8,6 +8,9 @@ type CafeCardProps = {
   selected?: boolean;
   onSelect?: () => void;
   variant?: "default" | "grid" | "rail";
+  /** Fires after this card's status button moves the cafe from Wish List to
+   * Tasted, so the page can open a drawer/note editor for photos & comments. */
+  onMarkedTasted?: () => void;
 };
 
 function priceLabel(tier: Shop["priceTier"]) {
@@ -19,7 +22,21 @@ function starsForRating(rating: number): string {
   return "★".repeat(full) + "☆".repeat(5 - full);
 }
 
-export function CafeCard({ shop, selected = false, onSelect, variant = "default" }: CafeCardProps) {
+function RatingDisplay({ rating }: { rating?: number }) {
+  if (rating == null) {
+    return <span className="cafe-rating-unrated">Not yet rated</span>;
+  }
+  return (
+    <>
+      <span className="stars" aria-hidden="true">
+        {starsForRating(rating)}
+      </span>
+      <span>{rating.toFixed(1)}</span>
+    </>
+  );
+}
+
+export function CafeCard({ shop, selected = false, onSelect, variant = "default", onMarkedTasted }: CafeCardProps) {
   const isGrid = variant === "grid";
   const isRail = variant === "rail";
 
@@ -39,19 +56,25 @@ export function CafeCard({ shop, selected = false, onSelect, variant = "default"
           <div className="cafe-card-rail-body">
             <div className="cafe-card-rail-top">
               <span className="rank-badge">{shop.rank ? `#${shop.rank}` : "On the list"}</span>
-              <span className="rank-area">{shop.area}</span>
+              <span className="rank-area">
+                {shop.cuisine ? `${shop.cuisine} · ` : ""}
+                {shop.area}
+              </span>
             </div>
             <h3 className="cafe-card-rail-name">{shop.name}</h3>
             <div className="cafe-card-rail-rating">
-              <span className="stars" aria-hidden="true">
-                {starsForRating(shop.rating)}
-              </span>
-              <span>{shop.rating.toFixed(1)}</span>
+              <RatingDisplay rating={shop.rating} />
             </div>
-            <p className="cafe-card-rail-dish">{shop.signatureDrink}</p>
+            {shop.signatureDrink && <p className="cafe-card-rail-dish">{shop.signatureDrink}</p>}
           </div>
         </button>
-        <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-rail-save" />
+        <CafeStatusButton
+          slug={shop.slug}
+          cafeName={shop.name}
+          size="sm"
+          className="cafe-card-rail-save"
+          onMarkedTasted={onMarkedTasted}
+        />
       </article>
     );
   }
@@ -67,24 +90,28 @@ export function CafeCard({ shop, selected = false, onSelect, variant = "default"
 
       <div className="cafe-card-header">
         <div className="cafe-card-top">
-          <span className="cafe-area">{shop.area}</span>
+          <span className="cafe-area">
+            {shop.cuisine ? `${shop.cuisine} · ` : ""}
+            {shop.area}
+          </span>
           <div className="cafe-card-top-end">
             <span className="cafe-price">{priceLabel(shop.priceTier)}</span>
-            <SaveCafeButton slug={shop.slug} cafeName={shop.name} size="sm" className="cafe-card-save" />
+            <CafeStatusButton
+              slug={shop.slug}
+              cafeName={shop.name}
+              size="sm"
+              className="cafe-card-save"
+              onMarkedTasted={onMarkedTasted}
+            />
           </div>
         </div>
 
         <button type="button" className="cafe-card-main" onClick={onSelect}>
           <h3 className="cafe-name">{shop.name}</h3>
-          <p className="cafe-signature">{shop.signatureDrink}</p>
+          {shop.signatureDrink && <p className="cafe-signature">{shop.signatureDrink}</p>}
           <div className="cafe-rating">
-            <span className="stars" aria-hidden="true">
-              ★
-            </span>
-            <span>
-              {shop.rating.toFixed(1)}
-              {!isGrid && ` · ${reviewCountOf(shop)} reviews`}
-            </span>
+            <RatingDisplay rating={shop.rating} />
+            {shop.rating != null && !isGrid && <span> · {reviewCountOf(shop)} reviews</span>}
           </div>
           {shop.flavorTags && shop.flavorTags.length > 0 && !isGrid && (
             <div className="flavor-tags">

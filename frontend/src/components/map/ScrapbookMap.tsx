@@ -23,6 +23,14 @@ const AREA_LABELS: { name: string; lat: number; lng: number; anchor?: "start" | 
 
 type PreviewState = { cafe: MergedShop; left: number; top: number };
 
+/** One filter dimension's worth of ready-made chip buttons -- callers (which
+ * know what bucket/data the chips actually mean) build these directly, so
+ * this component stays a plain presentational renderer. */
+export type FilterChipGroup = {
+  groupLabel: string;
+  chips: { label: string; active: boolean; onClick: () => void }[];
+};
+
 type ScrapbookMapProps = {
   cafes: MergedShop[];
   selectedSlug: string | null;
@@ -30,6 +38,7 @@ type ScrapbookMapProps = {
   onSelect: (slug: string) => void;
   query: string;
   onQueryChange: (value: string) => void;
+  filterGroups?: FilterChipGroup[];
 };
 
 export function ScrapbookMap({
@@ -39,6 +48,7 @@ export function ScrapbookMap({
   onSelect,
   query,
   onQueryChange,
+  filterGroups = [],
 }: ScrapbookMapProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -340,6 +350,27 @@ export function ScrapbookMap({
           />
         </label>
       </div>
+
+      {filterGroups.map((group) => (
+        <div
+          className="chips filter-chip-group"
+          key={group.groupLabel}
+          role="group"
+          aria-label={group.groupLabel}
+        >
+          <span className="filter-chip-group-label">{group.groupLabel}</span>
+          {group.chips.map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              className={`chip${chip.active ? " is-on" : ""}`}
+              onClick={chip.onClick}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      ))}
 
       <div className="map-stage" ref={stageRef}>
         <svg ref={svgRef} className="map-svg" aria-label="Map of Singapore with matcha cafes" />

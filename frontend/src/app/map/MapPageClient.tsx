@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CafeCard } from "@/components/cards/CafeCard";
 import { CafeDrawer } from "@/components/map/CafeDrawer";
-import { ScrapbookMap } from "@/components/map/ScrapbookMap";
+import { ScrapbookMap, type FilterChipGroup } from "@/components/map/ScrapbookMap";
 import { Nav } from "@/components/layout/Nav";
 import { Topbar } from "@/components/layout/Topbar";
 import { useCafes } from "@/components/providers/CafesProvider";
@@ -53,6 +53,13 @@ export default function MapPageClient() {
     initialSlug ? { mode: "view", slug: initialSlug } : null,
   );
   const [query, setQuery] = useState("");
+  // Wish List filters by cost (nothing's been tried yet, so price is the
+  // only thing worth narrowing by); Tasted filters by your own rating and
+  // cuisine instead, since those only mean something once you've actually
+  // been.
+  const [priceFilter, setPriceFilter] = useState<1 | 2 | 3 | null>(null);
+  const [ratingFilter, setRatingFilter] = useState<number | null>(null);
+  const [cuisineFilter, setCuisineFilter] = useState<string | null>(null);
 
   const bucketSlugSet = useMemo(
     () => new Set(bucket === "wishlist" ? savedSlugs : triedSlugs),
@@ -80,11 +87,87 @@ export default function MapPageClient() {
     const q = query.trim().toLowerCase();
     const visible = new Set<string>();
     for (const cafe of sortedCafes) {
-      const hit = !q || cafe.name.toLowerCase().includes(q);
-      if (hit) visible.add(cafe.slug);
+      const nameHit = !q || cafe.name.toLowerCase().includes(q);
+      const priceHit = bucket !== "wishlist" || priceFilter == null || cafe.priceTier === priceFilter;
+      const personalRating = triedCafes[cafe.slug]?.rating;
+      const ratingHit =
+        bucket !== "tasted" || ratingFilter == null || (personalRating != null && Math.round(personalRating) === ratingFilter);
+      const cuisineHit = bucket !== "tasted" || cuisineFilter == null || cafe.cuisine === cuisineFilter;
+      if (nameHit && priceHit && ratingHit && cuisineHit) visible.add(cafe.slug);
     }
     return visible;
-  }, [sortedCafes, query]);
+  }, [sortedCafes, query, bucket, priceFilter, ratingFilter, cuisineFilter, triedCafes]);
+
+  const priceOptions = useMemo(
+    () => Array.from(new Set(sortedCafes.map((c) => c.priceTier))).sort((a, b) => a - b),
+    [sortedCafes],
+  );
+  const ratingOptions = useMemo(() => {
+    const values = sortedCafes
+      .map((c) => triedCafes[c.slug]?.rating)
+      .filter((r): r is number => r != null)
+      .map((r) => Math.round(r));
+    return Array.from(new Set(values)).sort((a, b) => b - a);
+  }, [sortedCafes, triedCafes]);
+  const cuisineOptions = useMemo(
+    () =>
+      Array.from(new Set(sortedCafes.map((c) => c.cuisine).filter((c): c is string => !!c))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [sortedCafes],
+  );
+
+  // If the cafe an active filter was matching gets edited/un-tasted/removed,
+  // its value can vanish from the options list entirely -- its chip
+  // disappears, but without this the filter itself would silently keep
+  // matching nothing with no visible chip left to explain why or clear it.
+  useEffect(() => {
+    if (priceFilter != null && !priceOptions.includes(priceFilter)) setPriceFilter(null);
+  }, [priceOptions, priceFilter]);
+  useEffect(() => {
+    if (ratingFilter != null && !ratingOptions.includes(ratingFilter)) setRatingFilter(null);
+  }, [ratingOptions, ratingFilter]);
+  useEffect(() => {
+    if (cuisineFilter != null && !cuisineOptions.includes(cuisineFilter)) setCuisineFilter(null);
+  }, [cuisineOptions, cuisineFilter]);
+
+  const filterGroups: FilterChipGroup[] = useMemo(() => {
+    if (bucket === "wishlist") {
+      if (priceOptions.length === 0) return [];
+      return [
+        {
+          groupLabel: "Price",
+          chips: priceOptions.map((tier) => ({
+            label: "$".repeat(tier),
+            active: priceFilter === tier,
+            onClick: () => setPriceFilter((prev) => (prev === tier ? null : tier)),
+          })),
+        },
+      ];
+    }
+    const groups: FilterChipGroup[] = [];
+    if (ratingOptions.length > 0) {
+      groups.push({
+        groupLabel: "Rating",
+        chips: ratingOptions.map((r) => ({
+          label: `★${r}`,
+          active: ratingFilter === r,
+          onClick: () => setRatingFilter((prev) => (prev === r ? null : r)),
+        })),
+      });
+    }
+    if (cuisineOptions.length > 0) {
+      groups.push({
+        groupLabel: "Cuisine",
+        chips: cuisineOptions.map((c) => ({
+          label: c,
+          active: cuisineFilter === c,
+          onClick: () => setCuisineFilter((prev) => (prev === c ? null : c)),
+        })),
+      });
+    }
+    return groups;
+  }, [bucket, priceOptions, ratingOptions, cuisineOptions, priceFilter, ratingFilter, cuisineFilter]);
 
   const dimmedSlugs = useMemo(
     () => new Set(sortedCafes.filter((c) => !visibleSlugs.has(c.slug)).map((c) => c.slug)),
@@ -141,6 +224,9 @@ export default function MapPageClient() {
   function switchBucket(next: Bucket) {
     setBucket(next);
     setQuery("");
+    setPriceFilter(null);
+    setRatingFilter(null);
+    setCuisineFilter(null);
   }
 
   const shownCount = visibleSlugs.size;
@@ -198,6 +284,7 @@ export default function MapPageClient() {
               onSelect={openView}
               query={query}
               onQueryChange={setQuery}
+              filterGroups={filterGroups}
             />
 
             <aside className="rail">

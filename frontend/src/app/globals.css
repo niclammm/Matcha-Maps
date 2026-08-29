@@ -1772,6 +1772,19 @@ a.btn {
   flex: none;
 }
 
+.filter-chip-group {
+  align-items: center;
+  margin-top: 8px;
+}
+
+.filter-chip-group-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brown-light);
+  margin-right: 2px;
+}
+
 .chip {
   white-space: nowrap;
   padding: 7px 14px;

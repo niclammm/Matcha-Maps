@@ -20,7 +20,7 @@ export type Shop = {
   id: string;
   slug: string;
   name: string;
-  area: string;
+  country: string;
   /** Unset until someone rates it — a wishlisted place hasn't been tried yet. */
   rating?: number;
   reviewCount: number;

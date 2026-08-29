@@ -2,16 +2,12 @@
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import type { CafeReview, MergedShop, NewCafeInput } from "@/lib/types";
+import type { CafePatch } from "@/lib/cafe-mapping";
 import { useCafes } from "@/components/providers/CafesProvider";
 import { CafeStatusButton } from "@/components/status/CafeStatusButton";
 import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
-import {
-  dataUrlBytes,
-  extractPlaceInfoFromGoogleMapsUrl,
-  fileToDataUrl,
-  resolveGoogleMapsLink,
-  reviewCountOf,
-} from "@/lib/cafe-helpers";
+import { extractPlaceInfoFromGoogleMapsUrl, resolveGoogleMapsLink, reviewCountOf } from "@/lib/cafe-helpers";
+import { uploadPhoto } from "@/lib/upload-photo";
 import { isWithinSingapore } from "@/lib/geo";
 
 type DrawerMode = "view" | "add" | "edit";
@@ -45,7 +41,6 @@ type FormState = {
 };
 
 const TILE_CLASSES = ["tile-tan", "tile-blue", "tile-sage", "tile-butter", "tile-honey"];
-const MAX_PHOTO_BYTES_WARN = 3_000_000;
 
 function starsForRating(rating: number): string {
   const full = Math.round(rating);
@@ -108,6 +103,8 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
   const [extracting, setExtracting] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadingNotePhotos, setUploadingNotePhotos] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   // Tracks which fields still hold a Google-Maps-link auto-fill rather than
   // something the user typed themselves, so re-pasting a corrected link can
@@ -192,20 +189,21 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
   async function handlePhotosSelected(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    e.target.value = "";
+    setUploadingPhotos(true);
     const added: string[] = [];
+    let failed = 0;
     for (const file of Array.from(files)) {
       try {
-        added.push(await fileToDataUrl(file));
+        added.push(await uploadPhoto(file));
       } catch {
-        // skip files that fail to decode, keep the rest
+        failed += 1;
       }
     }
     setForm((f) => ({ ...f, photos: [...f.photos, ...added] }));
-    e.target.value = "";
-
-    const totalBytes = [...form.photos, ...added].reduce((sum, p) => sum + dataUrlBytes(p), 0);
-    if (totalBytes > MAX_PHOTO_BYTES_WARN) {
-      setWarning("These photos are getting large -- if saving fails, remove one and try again.");
+    setUploadingPhotos(false);
+    if (failed > 0) {
+      setWarning(failed === 1 ? "One photo failed to upload." : `${failed} photos failed to upload.`);
     }
   }
 
@@ -219,23 +217,25 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
   async function handleNotePhotosSelected(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    e.target.value = "";
+    setUploadingNotePhotos(true);
     const added: string[] = [];
+    let failed = 0;
     for (const file of Array.from(files)) {
       try {
-        added.push(await fileToDataUrl(file));
+        added.push(await uploadPhoto(file));
       } catch {
-        // skip files that fail to decode, keep the rest
+        failed += 1;
       }
     }
-    e.target.value = "";
+    setUploadingNotePhotos(false);
     const nextPhotos = [...noteDraft.photos, ...added];
     setNoteDraft((d) => ({ ...d, photos: nextPhotos }));
     // No blur event fires for a file picker, so commit immediately.
     commitTastedNote(nextPhotos);
 
-    const totalBytes = nextPhotos.reduce((sum, p) => sum + dataUrlBytes(p), 0);
-    if (totalBytes > MAX_PHOTO_BYTES_WARN) {
-      setWarning("These photos are getting large -- if saving fails, remove one and try again.");
+    if (failed > 0) {
+      setWarning(failed === 1 ? "One photo failed to upload." : `${failed} photos failed to upload.`);
     }
   }
 
@@ -361,15 +361,37 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     if (mode === "add") {
       const { shop: created, persisted } = addCafe(input);
       if (!persisted) {
-        setWarning("Added for this session, but your browser storage is full -- remove a photo so it survives a reload.");
+        setWarning("Couldn't save this restaurant -- try again.");
       }
       onSaved(created);
     } else if (mode === "edit" && shop) {
-      const { persisted } = updateCafe(shop.slug, input);
+      // Edit sends `null` (not `undefined`) for a cleared optional field --
+      // `input` above uses `undefined` for the add-restaurant form, where
+      // that correctly means "omit"/"no value yet", but a PATCH request
+      // JSON-serializes its body, and `JSON.stringify` silently drops
+      // `undefined` keys entirely. Sent as `undefined`, "I cleared this
+      // field" would arrive indistinguishable from "I didn't touch this
+      // field" and the old value would silently stick around server-side.
+      const patch: CafePatch = {
+        ...input,
+        rating: rating ?? null,
+        cuisine: form.cuisine.trim() || null,
+        notes: form.notes.trim() || null,
+        googleMapsUrl: form.googleMapsUrl.trim() || null,
+        matchaOrigin: form.matchaOrigin.trim() || null,
+        popularDishes: form.popularDishes.length ? form.popularDishes : null,
+        photos: form.photos.length ? form.photos : null,
+        reviews: form.reviews.length ? form.reviews : null,
+        flavorTags: flavorTags.length ? flavorTags : null,
+      };
+      const { persisted } = updateCafe(shop.slug, patch);
       if (!persisted) {
-        setWarning("Saved for this session, but your browser storage is full -- remove a photo so it survives a reload.");
+        setWarning("Couldn't save these changes -- try again.");
       }
-      onSaved({ ...shop, ...input, isCustom: true });
+      // onSaved only ever reads `.slug` at either call site (MapPageClient,
+      // HeroAddButton) -- updateCafe already pushed the real change into
+      // shared state above, so the original `shop` is enough here.
+      onSaved(shop);
     }
   }
 
@@ -469,7 +491,14 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
               />
               <div className="cafe-drawer-field">
                 <span>Your photos</span>
-                <input type="file" accept="image/*" multiple onChange={handleNotePhotosSelected} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleNotePhotosSelected}
+                  disabled={uploadingNotePhotos}
+                />
+                {uploadingNotePhotos && <span className="cafe-drawer-extracting">Uploading…</span>}
                 {noteDraft.photos.length > 0 && (
                   <div className="cafe-drawer-photo-thumbs">
                     {noteDraft.photos.map((src, i) => (
@@ -539,11 +568,9 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
           </div>
 
           <div className="cafe-drawer-actions">
-            {shop.isCustom && (
-              <button type="button" className="btn btn-primary" onClick={() => onRequestEdit(shop.slug)}>
-                Edit
-              </button>
-            )}
+            <button type="button" className="btn btn-primary" onClick={() => onRequestEdit(shop.slug)}>
+              Edit
+            </button>
             {!confirmingRemove ? (
               <button type="button" className="cafe-drawer-remove-btn" onClick={() => setConfirmingRemove(true)}>
                 Remove from map
@@ -747,7 +774,14 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
 
               <div className="cafe-drawer-field">
                 <span>Photos</span>
-                <input type="file" accept="image/*" multiple onChange={handlePhotosSelected} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotosSelected}
+                  disabled={uploadingPhotos}
+                />
+                {uploadingPhotos && <span className="cafe-drawer-extracting">Uploading…</span>}
                 {form.photos.length > 0 && (
                   <div className="cafe-drawer-photo-thumbs">
                     {form.photos.map((src, i) => (
@@ -824,8 +858,8 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
             <button type="button" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={extracting}>
-              {extracting ? "Extracting…" : mode === "add" ? "Add restaurant" : "Save changes"}
+            <button type="submit" className="btn btn-primary" disabled={extracting || uploadingPhotos}>
+              {extracting ? "Extracting…" : uploadingPhotos ? "Uploading…" : mode === "add" ? "Add restaurant" : "Save changes"}
             </button>
           </div>
         </form>

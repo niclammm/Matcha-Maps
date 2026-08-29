@@ -23,6 +23,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
+# generated Prisma client (regenerated via `prisma generate`)
+frontend/src/generated/
+
 # Full-resolution source images — only web/ variants are tracked
 matcha-pictures/*.png
 # ignore loose pngs in public/matcha-pictures root, NOT the web/ folder

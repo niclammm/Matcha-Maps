@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Fraunces, Work_Sans } from "next/font/google";
-import { AppProviders } from "@/components/providers/AppProviders";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -21,12 +20,13 @@ export const metadata: Metadata = {
     "Every matcha cafe and bowl in Singapore, tasted, rated, and mapped so you never waste a sip.",
 };
 
+// Deliberately minimal: no data fetching, no AppProviders here. Both live in
+// `app/(app)/layout.tsx` instead, scoped to everything except `/login` --
+// see that file for why.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${fraunces.variable} ${workSans.variable}`}>
-      <body>
-        <AppProviders>{children}</AppProviders>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

@@ -150,10 +150,10 @@ export function extractPlaceInfoFromGoogleMapsUrl(url: string): ExtractedPlaceIn
 }
 
 /** Reads an image File, downscales it to `maxDim` on its longest side via
- * an offscreen canvas, and returns a compressed JPEG data-URL. Keeps
- * localStorage-stored photos small enough that a handful of them stay
- * well within the ~5-10MB/origin quota. */
-export function fileToDataUrl(file: File, maxDim = 800, quality = 0.8): Promise<string> {
+ * an offscreen canvas, and returns a compressed JPEG Blob ready to upload.
+ * Uploads go to real file storage now (not localStorage), so this is just
+ * a bandwidth/storage-cost trim, not a hard quota workaround. */
+export function fileToResizedBlob(file: File, maxDim = 1600, quality = 0.85): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Could not read file"));
@@ -173,18 +173,14 @@ export function fileToDataUrl(file: File, maxDim = 800, quality = 0.8): Promise<
           return;
         }
         ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("Could not encode image"))),
+          "image/jpeg",
+          quality,
+        );
       };
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
   });
-}
-
-/** Rough size estimate (bytes) of a data-URL, for a soft pre-save warning
- * before actually hitting localStorage's quota. */
-export function dataUrlBytes(dataUrl: string): number {
-  const commaIndex = dataUrl.indexOf(",");
-  const base64 = commaIndex === -1 ? dataUrl : dataUrl.slice(commaIndex + 1);
-  return Math.round((base64.length * 3) / 4);
 }

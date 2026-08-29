@@ -1,4 +1,4 @@
-import { TastedPageClient } from "@/app/tasted/TastedPageClient";
+import { TastedPageClient } from "@/app/(app)/tasted/TastedPageClient";
 
 export default function TastedPage() {
   return <TastedPageClient />;

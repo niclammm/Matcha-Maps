@@ -1,0 +1,53 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+  // No url here -- configured in prisma.config.ts (Prisma 7 no longer reads
+  // the connection string from the schema file).
+}
+
+/// A single shared catalog of cafes/restaurants. Wish List and Tasted are
+/// mutually exclusive by construction (the app's CafeStatusButton only ever
+/// cycles neither -> wishlist -> tasted -> wishlist), so they live as one
+/// nullable `status` column rather than two independent join tables.
+model Cafe {
+  id             String    @id @default(uuid())
+  slug           String    @unique
+  name           String
+  country        String
+  publicRating   Float?
+  reviewCount    Int       @default(0)
+  signatureDrink String
+  cuisine        String?
+  notes          String?
+  priceTier      Int
+  lat            Float
+  lng            Float
+  address        String
+  matchaOrigin   String?
+  matchaGrade    String?
+  flavorTags     String[]  @default([])
+  flavorScores   Json?
+  prepStyles     String[]  @default([])
+  editorsPick    Boolean   @default(false)
+  rank           Int?
+  coverImage     String?
+  photos         String[]  @default([])
+  googleMapsUrl  String?
+  popularDishes  String[]  @default([])
+  reviews        Json      @default("[]")
+
+  /// "wishlist" | "tasted" | null (neither)
+  status         String?
+  tastedRating   Float?
+  tastedComment  String?
+  tastedPhotos   String[]  @default([])
+  tastedAt       DateTime?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import type { MergedShop } from "@/lib/types";
+import { WishListMark } from "@/components/brand/WishListMark";
+import { TastedMark } from "@/components/brand/TastedMark";
 
 type GeoFeature = {
   type: "Feature";
@@ -39,6 +41,9 @@ type ScrapbookMapProps = {
   query: string;
   onQueryChange: (value: string) => void;
   filterGroups?: FilterChipGroup[];
+  /** Which personal list is currently shown -- recolors pins/leader-dots
+   * matcha green vs. tasted gold to match. */
+  bucket: "wishlist" | "tasted";
 };
 
 export function ScrapbookMap({
@@ -49,6 +54,7 @@ export function ScrapbookMap({
   query,
   onQueryChange,
   filterGroups = [],
+  bucket,
 }: ScrapbookMapProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -235,7 +241,7 @@ export function ScrapbookMap({
         .attr("cx", n.tx)
         .attr("cy", n.ty)
         .attr("r", 3.2)
-        .attr("fill", "var(--saved-marker)")
+        .attr("fill", bucket === "tasted" ? "var(--tasted-gold)" : "var(--matcha)")
         .attr("stroke", "var(--off-white)")
         .attr("stroke-width", 1.5);
     });
@@ -293,7 +299,7 @@ export function ScrapbookMap({
         .attr("letter-spacing", ".16em")
         .text(l.name.toUpperCase());
     });
-  }, [geo, cafes]);
+  }, [geo, cafes, bucket]);
 
   useEffect(() => {
     if (!geo || !stageRef.current) return;
@@ -332,7 +338,7 @@ export function ScrapbookMap({
   const hidePreview = () => setPreview(null);
 
   return (
-    <section className="map-paper">
+    <section className={`map-paper${bucket === "tasted" ? " map-paper--tasted" : ""}`}>
       <span className="washi-tape washi-tape--tan" aria-hidden="true" />
       <span className="washi-tape washi-tape--blue" aria-hidden="true" />
 
@@ -437,6 +443,17 @@ export function ScrapbookMap({
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {geo && (
+          <div className="bucket-badge">
+            {bucket === "tasted" ? (
+              <TastedMark size={15} decorative />
+            ) : (
+              <WishListMark size={26} decorative />
+            )}
+            <span>{bucket === "tasted" ? "Showing what you've tasted" : "Showing your wish list"}</span>
           </div>
         )}
       </div>

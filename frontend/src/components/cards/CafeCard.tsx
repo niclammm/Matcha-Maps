@@ -58,7 +58,7 @@ export function CafeCard({ shop, selected = false, onSelect, variant = "default"
               <span className="rank-badge">{shop.rank ? `#${shop.rank}` : "On the list"}</span>
               <span className="rank-area">
                 {shop.cuisine ? `${shop.cuisine} · ` : ""}
-                {shop.area}
+                {shop.country}
               </span>
             </div>
             <h3 className="cafe-card-rail-name">{shop.name}</h3>
@@ -92,7 +92,7 @@ export function CafeCard({ shop, selected = false, onSelect, variant = "default"
         <div className="cafe-card-top">
           <span className="cafe-area">
             {shop.cuisine ? `${shop.cuisine} · ` : ""}
-            {shop.area}
+            {shop.country}
           </span>
           <div className="cafe-card-top-end">
             <span className="cafe-price">{priceLabel(shop.priceTier)}</span>

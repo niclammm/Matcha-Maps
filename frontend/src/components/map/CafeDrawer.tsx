@@ -27,7 +27,7 @@ type CafeDrawerProps = {
 
 type FormState = {
   name: string;
-  area: string;
+  country: string;
   address: string;
   lat: string;
   lng: string;
@@ -55,7 +55,7 @@ function starsForRating(rating: number): string {
 function emptyForm(): FormState {
   return {
     name: "",
-    area: "",
+    country: "Singapore",
     address: "",
     lat: "",
     lng: "",
@@ -76,7 +76,7 @@ function emptyForm(): FormState {
 function shopToForm(shop: MergedShop): FormState {
   return {
     name: shop.name,
-    area: shop.area,
+    country: shop.country,
     address: shop.location.address,
     lat: String(shop.location.lat),
     lng: String(shop.location.lng),
@@ -320,12 +320,12 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     setWarning(null);
 
     const name = form.name.trim();
-    const area = form.area.trim();
+    const country = form.country.trim();
     const lat = Number(form.lat);
     const lng = Number(form.lng);
 
-    if (!name || !area) {
-      setWarning("Name and area are required.");
+    if (!name || !country) {
+      setWarning("Name and country are required.");
       return;
     }
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
@@ -342,7 +342,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
 
     const input: NewCafeInput = {
       name,
-      area,
+      country,
       rating,
       signatureDrink: form.signatureDrink.trim(),
       cuisine: form.cuisine.trim() || undefined,
@@ -400,7 +400,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
             <div>
               <p className="cafe-drawer-eyebrow">
                 {shop.cuisine ? `${shop.cuisine} · ` : ""}
-                {shop.area} · {"$".repeat(shop.priceTier)}
+                {shop.country} · {"$".repeat(shop.priceTier)}
               </p>
               <h2 className="cafe-drawer-name">{shop.name}</h2>
               <div className="cafe-rating">
@@ -598,8 +598,12 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
           </label>
 
           <label className="cafe-drawer-field">
-            <span>Area</span>
-            <input value={form.area} onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))} required />
+            <span>Country</span>
+            <input
+              value={form.country}
+              onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+              required
+            />
           </label>
 
           {mode === "edit" && (

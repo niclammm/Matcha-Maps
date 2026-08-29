@@ -27,7 +27,7 @@ export function RankCardCompact({ shop, doodle, doodleClass }: RankCardCompactPr
       <div className="rank-card-compact-body">
         <div className="rank-card-top">
           {shop.rank ? <span className="rank-badge">#{shop.rank}</span> : <span className="rank-badge">Top</span>}
-          <span className="rank-area">{shop.area}</span>
+          <span className="rank-area">{shop.country}</span>
         </div>
         <h3 className="rank-name-compact">{shop.name}</h3>
         <div className="rank-rating rank-rating-compact">

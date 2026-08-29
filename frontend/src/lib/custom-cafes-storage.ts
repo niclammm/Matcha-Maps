@@ -35,6 +35,23 @@ export function writeRemovedSlugs(slugs: string[]): boolean {
   }
 }
 
+/** Cafes saved before the area -> country rename have `area`, not
+ * `country`, on disk. Without this, isValidShop would reject every one of
+ * them outright and readCustomCafes would silently drop a user's real
+ * custom cafes. Carries the old free-text value straight over -- it was
+ * already whatever the user typed (sometimes a neighborhood, sometimes
+ * already "Singapore"), so it's the least lossy thing to do with it. */
+function migrateLegacyAreaField(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const v = value as Record<string, unknown>;
+  if (typeof v.country === "string") return value;
+  if (typeof v.area === "string") {
+    const { area, ...rest } = v;
+    return { ...rest, country: area };
+  }
+  return value;
+}
+
 function isValidShop(value: unknown): value is Shop {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
@@ -43,7 +60,7 @@ function isValidShop(value: unknown): value is Shop {
     typeof v.id === "string" &&
     typeof v.slug === "string" &&
     typeof v.name === "string" &&
-    typeof v.area === "string" &&
+    typeof v.country === "string" &&
     (v.rating === undefined || typeof v.rating === "number") &&
     typeof v.reviewCount === "number" &&
     typeof v.signatureDrink === "string" &&
@@ -72,7 +89,7 @@ export function readCustomCafes(): Shop[] {
     ) {
       return [];
     }
-    return (parsed as CustomCafesFile).cafes.filter(isValidShop);
+    return (parsed as CustomCafesFile).cafes.map(migrateLegacyAreaField).filter(isValidShop);
   } catch {
     return [];
   }

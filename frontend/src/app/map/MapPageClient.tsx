@@ -53,34 +53,38 @@ export default function MapPageClient() {
     initialSlug ? { mode: "view", slug: initialSlug } : null,
   );
   const [query, setQuery] = useState("");
-  const [areaFilter, setAreaFilter] = useState<string | null>(null);
 
   const bucketSlugSet = useMemo(
     () => new Set(bucket === "wishlist" ? savedSlugs : triedSlugs),
     [bucket, savedSlugs, triedSlugs],
   );
 
-  const sortedCafes = useMemo(
-    () =>
-      cafes
-        .filter((c) => bucketSlugSet.has(c.slug))
-        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || (b.rating ?? 0) - (a.rating ?? 0)),
+  const bucketCafes = useMemo(
+    () => cafes.filter((c) => bucketSlugSet.has(c.slug)),
     [cafes, bucketSlugSet],
   );
 
-  const areas = useMemo(() => Array.from(new Set(sortedCafes.map((c) => c.area))), [sortedCafes]);
+  const sortedCafes = useMemo(
+    () =>
+      bucketCafes
+        // The illustrated map only knows Singapore's shape -- restaurants
+        // logged from anywhere else stay list-only (Wish List/Tasted pages)
+        // until real multi-country map support exists. Case/whitespace
+        // normalized since Country is free text, not a fixed list.
+        .filter((c) => c.country.trim().toLowerCase() === "singapore")
+        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || (b.rating ?? 0) - (a.rating ?? 0)),
+    [bucketCafes],
+  );
 
   const visibleSlugs = useMemo(() => {
     const q = query.trim().toLowerCase();
     const visible = new Set<string>();
     for (const cafe of sortedCafes) {
-      const hit =
-        (!q || cafe.name.toLowerCase().includes(q) || cafe.area.toLowerCase().includes(q)) &&
-        (!areaFilter || cafe.area === areaFilter);
+      const hit = !q || cafe.name.toLowerCase().includes(q);
       if (hit) visible.add(cafe.slug);
     }
     return visible;
-  }, [sortedCafes, query, areaFilter]);
+  }, [sortedCafes, query]);
 
   const dimmedSlugs = useMemo(
     () => new Set(sortedCafes.filter((c) => !visibleSlugs.has(c.slug)).map((c) => c.slug)),
@@ -134,13 +138,8 @@ export default function MapPageClient() {
     setDrawer(null);
   }
 
-  function toggleAreaFilter(area: string) {
-    setAreaFilter((prev) => (prev === area ? null : area));
-  }
-
   function switchBucket(next: Bucket) {
     setBucket(next);
-    setAreaFilter(null);
     setQuery("");
   }
 
@@ -199,9 +198,6 @@ export default function MapPageClient() {
               onSelect={openView}
               query={query}
               onQueryChange={setQuery}
-              areas={areas}
-              areaFilter={areaFilter}
-              onAreaFilterToggle={toggleAreaFilter}
             />
 
             <aside className="rail">
@@ -217,12 +213,18 @@ export default function MapPageClient() {
               {hydrated && sortedCafes.length === 0 ? (
                 <div className="rail-empty">
                   <p className="rail-empty-title">
-                    {bucket === "wishlist" ? "Your wish list is empty." : "You haven't tasted any cafes yet."}
+                    {bucketCafes.length > 0
+                      ? "No Singapore spots here yet."
+                      : bucket === "wishlist"
+                        ? "Your wish list is empty."
+                        : "You haven't tasted any cafes yet."}
                   </p>
                   <p className="rail-empty-body">
-                    {bucket === "wishlist"
-                      ? "Open a cafe and tap the glass icon to add it to your wish list."
-                      : "Open a cafe and mark it tasted once you've tried it."}
+                    {bucketCafes.length > 0
+                      ? `The map only shows Singapore restaurants -- everything else on your ${bucketLabel} is on its page instead.`
+                      : bucket === "wishlist"
+                        ? "Open a cafe and tap the glass icon to add it to your wish list."
+                        : "Open a cafe and mark it tasted once you've tried it."}
                   </p>
                 </div>
               ) : (

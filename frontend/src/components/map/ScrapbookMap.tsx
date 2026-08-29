@@ -30,9 +30,6 @@ type ScrapbookMapProps = {
   onSelect: (slug: string) => void;
   query: string;
   onQueryChange: (value: string) => void;
-  areas: string[];
-  areaFilter: string | null;
-  onAreaFilterToggle: (area: string) => void;
 };
 
 export function ScrapbookMap({
@@ -42,9 +39,6 @@ export function ScrapbookMap({
   onSelect,
   query,
   onQueryChange,
-  areas,
-  areaFilter,
-  onAreaFilterToggle,
 }: ScrapbookMapProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -327,8 +321,6 @@ export function ScrapbookMap({
   };
   const hidePreview = () => setPreview(null);
 
-  const paperSub = areaFilter ? areaFilter.toLowerCase() : "tasted & mapped";
-
   return (
     <section className="map-paper">
       <span className="washi-tape washi-tape--tan" aria-hidden="true" />
@@ -336,30 +328,17 @@ export function ScrapbookMap({
 
       <div className="paper-header">
         <span className="paper-title">Singapore</span>
-        <span className="paper-sub">{paperSub}</span>
+        <span className="paper-sub">tasted &amp; mapped</span>
         <label className="map-search">
           <span aria-hidden="true">⌕</span>
           <input
             type="search"
-            aria-label="Search cafes or areas"
-            placeholder="Search cafes or areas"
+            aria-label="Search cafes"
+            placeholder="Search cafes"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
           />
         </label>
-      </div>
-
-      <div className="chips">
-        {areas.map((area) => (
-          <button
-            key={area}
-            type="button"
-            className={`chip${areaFilter === area ? " is-on" : ""}`}
-            onClick={() => onAreaFilterToggle(area)}
-          >
-            {area}
-          </button>
-        ))}
       </div>
 
       <div className="map-stage" ref={stageRef}>
@@ -413,10 +392,7 @@ export function ScrapbookMap({
               <img src={preview.cafe.coverImage} alt="" />
             )}
             <div className="preview-body">
-              <div className="preview-top">
-                {preview.cafe.rank ? `#${preview.cafe.rank} · ` : ""}
-                {preview.cafe.area}
-              </div>
+              {preview.cafe.rank && <div className="preview-top">{`#${preview.cafe.rank}`}</div>}
               <h4 className="preview-name">{preview.cafe.name}</h4>
               {preview.cafe.signatureDrink && <p className="preview-dish">{preview.cafe.signatureDrink}</p>}
               <div className="preview-rating">

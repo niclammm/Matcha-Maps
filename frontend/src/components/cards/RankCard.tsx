@@ -16,7 +16,7 @@ export function RankCard({ shop, floating = true }: RankCardProps) {
     <article className={`rank-card${floating ? "" : " rank-card-static"}`}>
       <div className="rank-card-top">
         {shop.rank ? <span className="rank-badge">#{shop.rank} Ranked</span> : <span className="rank-badge">Featured</span>}
-        <span className="rank-area">{shop.area}</span>
+        <span className="rank-area">{shop.country}</span>
       </div>
       <h3 className="rank-name">{shop.name}</h3>
       <div className="rank-rating">

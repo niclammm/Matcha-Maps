@@ -1,19 +1,7 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import {
-  readSavedSlugs,
-  SAVED_CAFES_STORAGE_KEY,
-  writeSavedSlugs,
-} from "@/lib/saved-cafes-storage";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { useCafes } from "@/components/providers/CafesProvider";
 
 type SavedCafesContextValue = {
   savedSlugs: string[];
@@ -25,33 +13,24 @@ type SavedCafesContextValue = {
 
 const SavedCafesContext = createContext<SavedCafesContextValue | null>(null);
 
+/** A thin read/write view over CafesProvider's shared `status` field,
+ * kept as its own hook so call sites don't need to change now that Wish
+ * List and Tasted live on one shared cafe record instead of two
+ * independent localStorage stores. */
 export function SavedCafesProvider({ children }: { children: ReactNode }) {
-  const [savedSlugs, setSavedSlugs] = useState<string[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const { cafes, hydrated, updateCafe } = useCafes();
 
-  useEffect(() => {
-    setSavedSlugs(readSavedSlugs());
-    setHydrated(true);
-
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === SAVED_CAFES_STORAGE_KEY || event.key === null) {
-        setSavedSlugs(readSavedSlugs());
-      }
-    };
-
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
+  const savedSlugs = useMemo(() => cafes.filter((c) => c.status === "wishlist").map((c) => c.slug), [cafes]);
   const isSaved = useCallback((slug: string) => savedSlugs.includes(slug), [savedSlugs]);
 
-  const toggleSave = useCallback((slug: string) => {
-    setSavedSlugs((prev) => {
-      const next = prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug];
-      writeSavedSlugs(next);
-      return next;
-    });
-  }, []);
+  const toggleSave = useCallback(
+    (slug: string) => {
+      const cafe = cafes.find((c) => c.slug === slug);
+      if (!cafe) return;
+      updateCafe(slug, { status: cafe.status === "wishlist" ? null : "wishlist" });
+    },
+    [cafes, updateCafe],
+  );
 
   const value = useMemo(
     () => ({

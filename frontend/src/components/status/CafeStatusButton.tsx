@@ -3,8 +3,7 @@
 import { useCallback, useState } from "react";
 import { WishListMark } from "@/components/brand/WishListMark";
 import { TastedMark } from "@/components/brand/TastedMark";
-import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
-import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
+import { useCafes } from "@/components/providers/CafesProvider";
 
 type CafeStatusButtonProps = {
   slug: string;
@@ -19,7 +18,12 @@ type CafeStatusButtonProps = {
 };
 
 /** A cafe lives in exactly one list at a time. This single button reflects
- * and drives that: neither -> Wish List -> Tasted -> back to Wish List. */
+ * and drives that: neither -> Wish List -> Tasted -> back to Wish List.
+ * Reads/writes the shared `status` field directly (one `updateCafe` call
+ * per click) rather than composing two independent toggles -- with Wish
+ * List and Tasted now backed by one field instead of two localStorage
+ * stores, two separate toggle calls in the same click would race against
+ * each other's stale closures. */
 export function CafeStatusButton({
   slug,
   cafeName,
@@ -28,10 +32,10 @@ export function CafeStatusButton({
   className = "",
   onMarkedTasted,
 }: CafeStatusButtonProps) {
-  const { isSaved, toggleSave } = useSavedCafes();
-  const { isTried, toggleTried } = useTriedCafes();
-  const wishlisted = isSaved(slug);
-  const tasted = isTried(slug);
+  const { getBySlug, updateCafe } = useCafes();
+  const status = getBySlug(slug)?.status ?? null;
+  const wishlisted = status === "wishlist";
+  const tasted = status === "tasted";
   const [cheers, setCheers] = useState(false);
 
   const handleClick = useCallback(
@@ -43,17 +47,15 @@ export function CafeStatusButton({
       window.setTimeout(() => setCheers(false), 450);
 
       if (tasted) {
-        toggleTried(slug);
-        if (!wishlisted) toggleSave(slug);
+        updateCafe(slug, { status: "wishlist" });
       } else if (wishlisted) {
-        toggleSave(slug);
-        if (!tasted) toggleTried(slug);
+        updateCafe(slug, { status: "tasted" });
         onMarkedTasted?.();
       } else {
-        toggleSave(slug);
+        updateCafe(slug, { status: "wishlist" });
       }
     },
-    [tasted, wishlisted, slug, toggleSave, toggleTried, onMarkedTasted],
+    [tasted, wishlisted, slug, updateCafe, onMarkedTasted],
   );
 
   const statusClass = tasted ? " cafe-status-btn--tasted" : wishlisted ? " cafe-status-btn--wishlisted" : "";

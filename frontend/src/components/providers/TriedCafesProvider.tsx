@@ -1,21 +1,10 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import {
-  readTriedCafes,
-  TRIED_CAFES_STORAGE_KEY,
-  writeTriedCafes,
-  type TriedCafesData,
-  type TriedNote,
-} from "@/lib/tried-cafes-storage";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { useCafes } from "@/components/providers/CafesProvider";
+
+export type TriedNote = { rating: number | null; comment: string; photos: string[] };
+export type TriedCafesData = Record<string, TriedNote>;
 
 const EMPTY_NOTE: TriedNote = { rating: null, comment: "", photos: [] };
 
@@ -32,51 +21,43 @@ type TriedCafesContextValue = {
 
 const TriedCafesContext = createContext<TriedCafesContextValue | null>(null);
 
+/** A thin read/write view over CafesProvider's shared `status` +
+ * `tasted*` fields -- see SavedCafesProvider for why this exists as a
+ * wrapper instead of folding directly into every consumer. */
 export function TriedCafesProvider({ children }: { children: ReactNode }) {
-  const [triedCafes, setTriedCafes] = useState<TriedCafesData>({});
-  const [hydrated, setHydrated] = useState(false);
+  const { cafes, hydrated, updateCafe } = useCafes();
 
-  useEffect(() => {
-    setTriedCafes(readTriedCafes());
-    setHydrated(true);
-
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === TRIED_CAFES_STORAGE_KEY || event.key === null) {
-        setTriedCafes(readTriedCafes());
+  const triedCafes = useMemo<TriedCafesData>(() => {
+    const map: TriedCafesData = {};
+    for (const cafe of cafes) {
+      if (cafe.status === "tasted") {
+        map[cafe.slug] = { rating: cafe.tastedRating, comment: cafe.tastedComment, photos: cafe.tastedPhotos };
       }
-    };
+    }
+    return map;
+  }, [cafes]);
 
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
+  const triedSlugs = useMemo(() => Object.keys(triedCafes), [triedCafes]);
   const isTried = useCallback((slug: string) => slug in triedCafes, [triedCafes]);
 
-  const toggleTried = useCallback((slug: string) => {
-    setTriedCafes((prev) => {
-      const next = { ...prev };
-      if (slug in next) {
-        delete next[slug];
-      } else {
-        next[slug] = { ...EMPTY_NOTE };
-      }
-      writeTriedCafes(next);
-      return next;
-    });
-  }, []);
+  const toggleTried = useCallback(
+    (slug: string) => {
+      const cafe = cafes.find((c) => c.slug === slug);
+      if (!cafe) return;
+      updateCafe(slug, { status: cafe.status === "tasted" ? null : "tasted" });
+    },
+    [cafes, updateCafe],
+  );
 
   const getTriedNote = useCallback((slug: string) => triedCafes[slug] ?? EMPTY_NOTE, [triedCafes]);
 
-  const setTriedNote = useCallback((slug: string, note: TriedNote) => {
-    setTriedCafes((prev) => {
-      if (!(slug in prev)) return prev;
-      const next = { ...prev, [slug]: note };
-      writeTriedCafes(next);
-      return next;
-    });
-  }, []);
-
-  const triedSlugs = useMemo(() => Object.keys(triedCafes), [triedCafes]);
+  const setTriedNote = useCallback(
+    (slug: string, note: TriedNote) => {
+      if (!(slug in triedCafes)) return;
+      updateCafe(slug, { tastedRating: note.rating, tastedComment: note.comment, tastedPhotos: note.photos });
+    },
+    [triedCafes, updateCafe],
+  );
 
   const value = useMemo(
     () => ({

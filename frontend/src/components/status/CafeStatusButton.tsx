@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { MatchaGlassIcon } from "@/components/icons/MatchaGlassIcon";
+import { WishListMark } from "@/components/brand/WishListMark";
+import { TastedMark } from "@/components/brand/TastedMark";
 import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
 import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
 
@@ -62,6 +63,7 @@ export function CafeStatusButton({
       ? `Mark ${cafeName ?? "this"} as tasted`
       : `Add ${cafeName ?? "this"} to Wish List`;
   const buttonText = tasted ? "Move to Wish List" : wishlisted ? "Mark as tasted" : "Add to Wish List";
+  const markSize = size === "sm" ? { wishlist: 26, tasted: 15 } : { wishlist: 34, tasted: 20 };
 
   return (
     <button
@@ -70,7 +72,11 @@ export function CafeStatusButton({
       onClick={handleClick}
       aria-label={label}
     >
-      <MatchaGlassIcon saved={wishlisted || tasted} className="matcha-glass-icon" />
+      {tasted ? (
+        <TastedMark size={markSize.tasted} className="cafe-status-mark" decorative />
+      ) : (
+        <WishListMark size={markSize.wishlist} className="cafe-status-mark" dim={!wishlisted} decorative />
+      )}
       {showLabel && <span className="cafe-status-btn-label">{buttonText}</span>}
     </button>
   );

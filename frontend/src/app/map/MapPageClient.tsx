@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { CafeCard } from "@/components/cards/CafeCard";
 import { CafeDrawer } from "@/components/map/CafeDrawer";
 import { ScrapbookMap, type FilterChipGroup } from "@/components/map/ScrapbookMap";
+import { WishListMark } from "@/components/brand/WishListMark";
+import { TastedMark } from "@/components/brand/TastedMark";
 import { Nav } from "@/components/layout/Nav";
 import { Topbar } from "@/components/layout/Topbar";
 import { useCafes } from "@/components/providers/CafesProvider";
@@ -258,20 +260,30 @@ export default function MapPageClient() {
                 </>
               )}
             </div>
-            <div className="chips map-bucket-toggle" role="group" aria-label="Show">
+            <div className="bucket-tabs">
               <button
                 type="button"
-                className={`chip${bucket === "wishlist" ? " is-on" : ""}`}
+                className={`bucket-tab${bucket === "wishlist" ? " is-on" : " is-off"}`}
+                aria-pressed={bucket === "wishlist"}
                 onClick={() => switchBucket("wishlist")}
               >
-                Wish List
+                <WishListMark size={52} animated={bucket === "wishlist"} decorative className="bucket-tab-mark" />
+                <span className="bucket-tab-copy">
+                  <span className="bucket-tab-label">Wish List</span>
+                  <span className="bucket-tab-meta">{savedSlugs.length} to go</span>
+                </span>
               </button>
               <button
                 type="button"
-                className={`chip${bucket === "tasted" ? " is-on" : ""}`}
+                className={`bucket-tab${bucket === "tasted" ? " is-on" : " is-off"}`}
+                aria-pressed={bucket === "tasted"}
                 onClick={() => switchBucket("tasted")}
               >
-                Tasted
+                <TastedMark size={34} animated={bucket === "tasted"} decorative className="bucket-tab-mark" />
+                <span className="bucket-tab-copy">
+                  <span className="bucket-tab-label">Tasted</span>
+                  <span className="bucket-tab-meta">{triedSlugs.length} logged</span>
+                </span>
               </button>
             </div>
           </div>
@@ -285,6 +297,7 @@ export default function MapPageClient() {
               query={query}
               onQueryChange={setQuery}
               filterGroups={filterGroups}
+              bucket={bucket}
             />
 
             <aside className="rail">
@@ -334,11 +347,11 @@ export default function MapPageClient() {
               <div className="rail-foot">
                 <span className="legend-item">
                   <span className="legend-swatch" style={{ background: "var(--matcha)" }} />
-                  Ranked pick
+                  On the wish list
                 </span>
                 <span className="legend-item">
-                  <span className="legend-swatch" style={{ background: "var(--brown-tan)" }} />
-                  Community favorite
+                  <span className="legend-swatch" style={{ background: "var(--tasted-gold)" }} />
+                  Already tasted
                 </span>
               </div>
             </aside>

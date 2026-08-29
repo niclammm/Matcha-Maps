@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Logo } from "@/components/brand/Logo";
+import { WishListMark } from "@/components/brand/WishListMark";
+import { TastedMark } from "@/components/brand/TastedMark";
 
 type NavProps = {
   active?: "map" | "wishlist" | "tasted";
@@ -39,9 +41,11 @@ export function Nav({ active }: NavProps) {
           Map
         </Link>
         <Link href="/list" className={active === "wishlist" ? "active" : undefined} onClick={closeMenu}>
+          <WishListMark size={26} className="nav-link-mark" decorative />
           Wish List
         </Link>
         <Link href="/tasted" className={active === "tasted" ? "active" : undefined} onClick={closeMenu}>
+          <TastedMark size={15} className="nav-link-mark" decorative />
           Tasted
         </Link>
       </div>

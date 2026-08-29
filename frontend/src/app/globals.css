@@ -68,6 +68,11 @@
   --content-max: 1280px;
   --ring-radius: 40%;
   --saved-marker: #c4774a;
+
+  /* ── Postmark hero button & washi tape ── */
+  --cream-matcha: #f5f8f1;
+  --tape-gold: rgba(224, 199, 124, 0.92);
+  --ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 * { box-sizing: border-box; }
@@ -215,10 +220,12 @@ a:hover { color: var(--accent-hover); }
 .brand-mark {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, var(--matcha-light), var(--matcha));
-  box-shadow: 0 0 18px rgba(120, 155, 98, 0.35);
   flex-shrink: 0;
+}
+
+.logo-full {
+  width: 120px;
+  height: 120px;
 }
 
 .brand-name {
@@ -983,7 +990,21 @@ a.btn {
 }
 
 
-/* Centre hero button — opens the add-restaurant flow from the homepage */
+/* Centre hero button — a postmark/cancellation-stamp stamp that opens the
+   add-restaurant flow from the homepage. Colors below are this codebase's
+   real tokens; the design handoff named a couple of them differently
+   (--paper -> our --cream, --cream -> our --off-white, --ink -> our
+   --warm-brown, --ink-light -> our --brown-light) but every hex value it
+   specified matched one of these exactly. */
+
+@keyframes hero-add-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.025); }
+}
+
+@keyframes hero-add-spin {
+  to { transform: rotate(360deg); }
+}
 
 .hero-add-btn {
   position: absolute;
@@ -1004,46 +1025,155 @@ a.btn {
      never blocks clicks -- re-enable it here since this is the one
      interactive thing in that stage. */
   pointer-events: auto;
+  animation: hero-add-breathe 4.5s ease-in-out infinite;
 }
 
 .hero-add-btn-inner {
+  position: relative;
   width: 100%;
   height: 100%;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  border: 2px dashed var(--border);
   background: var(--off-white);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 24px;
-  text-align: center;
+  box-shadow: var(--shadow-card);
+  display: grid;
+  place-items: center;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
 }
 
 .hero-add-btn-inner:hover,
-.hero-add-btn-inner:focus-visible {
-  border-style: solid;
-  border-color: var(--matcha);
-  background: rgba(120, 155, 98, 0.08);
-  transform: scale(1.03);
+.hero-add-btn-inner:focus-within {
+  background: var(--cream-matcha);
+  box-shadow: 0 16px 36px rgba(107, 88, 72, 0.16);
 }
 
-.hero-add-btn-icon {
-  width: clamp(32px, 22%, 48px);
-  height: clamp(32px, 22%, 48px);
+.hero-add-btn-inner:active {
+  transform: scale(0.965);
+}
+
+.hero-add-btn-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(79, 107, 67, 0.55);
+  transition: border-color 0.25s ease;
+}
+
+.hero-add-btn-inner:hover .hero-add-btn-ring,
+.hero-add-btn-inner:focus-within .hero-add-btn-ring {
+  border-color: var(--matcha);
+}
+
+.hero-add-btn-perf {
+  position: absolute;
+  inset: 15px;
+  border-radius: 50%;
+  border: 1px dashed rgba(107, 88, 72, 0.45);
+}
+
+.hero-add-btn-type {
+  position: absolute;
+  inset: 0;
   color: var(--matcha-dark);
+  animation: hero-add-spin 34s linear infinite;
+}
+
+.hero-add-btn-inner:hover .hero-add-btn-type,
+.hero-add-btn-inner:focus-within .hero-add-btn-type {
+  animation-duration: 7s;
+}
+
+.hero-add-btn-type text {
+  font-family: var(--font-body), sans-serif;
+}
+
+.hero-add-btn-tape {
+  position: absolute;
+  width: 62px;
+  height: 21px;
+  background: var(--tape-gold);
+  border-block: 1px solid rgba(107, 88, 72, 0.16);
+  box-shadow: 0 2px 6px rgba(107, 88, 72, 0.16);
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.28s var(--ease-overshoot);
+}
+
+.hero-add-btn-inner:hover .hero-add-btn-tape,
+.hero-add-btn-inner:focus-within .hero-add-btn-tape {
+  opacity: 1;
+}
+
+.hero-add-btn-tape--tl {
+  top: 20px;
+  left: -16px;
+  transform: rotate(-38deg) translate(-7px, -7px);
+}
+
+.hero-add-btn-inner:hover .hero-add-btn-tape--tl,
+.hero-add-btn-inner:focus-within .hero-add-btn-tape--tl {
+  transform: rotate(-38deg) translate(0, 0);
+}
+
+.hero-add-btn-tape--br {
+  bottom: 20px;
+  right: -16px;
+  transform: rotate(-38deg) translate(7px, 7px);
+}
+
+.hero-add-btn-inner:hover .hero-add-btn-tape--br,
+.hero-add-btn-inner:focus-within .hero-add-btn-tape--br {
+  transform: rotate(-38deg) translate(0, 0);
+}
+
+.hero-add-btn-core {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.hero-add-btn-bowl {
+  width: 46px;
+  height: 46px;
+  transition: transform 0.35s var(--ease-overshoot);
+}
+
+.hero-add-btn-inner:hover .hero-add-btn-bowl,
+.hero-add-btn-inner:focus-within .hero-add-btn-bowl {
+  transform: translateY(2px);
+}
+
+.hero-add-btn-plus {
+  transform-origin: 26px 24px;
+  transition: transform 0.35s var(--ease-overshoot);
+}
+
+.hero-add-btn-inner:hover .hero-add-btn-plus,
+.hero-add-btn-inner:focus-within .hero-add-btn-plus {
+  transform: rotate(90deg) scale(1.15);
 }
 
 .hero-add-btn-label {
   margin: 0;
-  font-size: 12px;
+  font-family: var(--font-body), sans-serif;
   font-weight: 600;
-  line-height: 1.4;
+  font-size: 9px;
+  letter-spacing: 0.2em;
   color: var(--brown-light);
+  transition: color 0.2s ease;
 }
+
+.hero-add-btn-inner:hover .hero-add-btn-label,
+.hero-add-btn-inner:focus-within .hero-add-btn-label {
+  color: var(--matcha-dark);
+}
+
+/* No mobile font-size override needed: the arc text's font-size is in the
+   SVG's own viewBox units, so it scales proportionally with the button's
+   rendered size on its own -- confirmed legible down to ~150px wide. */
 
 @keyframes doodle-wiggle {
   0%, 100% { transform: rotate(12deg) scale(1); }
@@ -1386,6 +1516,17 @@ a.btn {
 
   .cafe-status-btn--cheers {
     animation: none !important;
+  }
+
+  .hero-add-btn,
+  .hero-add-btn-type {
+    animation: none !important;
+  }
+
+  .hero-add-btn-bowl,
+  .hero-add-btn-plus,
+  .hero-add-btn-tape {
+    transition-duration: 0.01ms !important;
   }
 }
 

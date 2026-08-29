@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Logo } from "@/components/brand/Logo";
 
 type NavProps = {
   active?: "map" | "wishlist" | "tasted";
@@ -17,7 +18,7 @@ export function Nav({ active }: NavProps) {
   return (
     <nav className="nav">
       <Link href="/" className="brand" onClick={closeMenu}>
-        <span className="brand-mark" aria-hidden="true" />
+        <Logo size="mark" className="brand-mark" />
         <span className="brand-name">Matcha Maps</span>
       </Link>
 

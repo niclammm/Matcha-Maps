@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CafeCard } from "@/components/cards/CafeCard";
 import { CafeDrawer } from "@/components/map/CafeDrawer";
 import { Nav } from "@/components/layout/Nav";
@@ -17,6 +17,7 @@ export function ListPageClient() {
   const { cafes, hydrated: cafesHydrated } = useCafes();
   const hydrated = savedHydrated && cafesHydrated;
   const [addOpen, setAddOpen] = useState(false);
+  const [countryFilter, setCountryFilter] = useState<string | null>(null);
 
   const savedCafes = useMemo(
     () =>
@@ -24,6 +25,26 @@ export function ListPageClient() {
         .map((slug) => cafes.find((cafe) => cafe.slug === slug))
         .filter((cafe): cafe is (typeof cafes)[number] => cafe != null),
     [cafes, savedSlugs],
+  );
+
+  // Not restricted to the map-enabled countries -- any free-text Country
+  // value already on the list is a valid filter option, same as the map's
+  // Cuisine filter.
+  const countryOptions = useMemo(
+    () => Array.from(new Set(savedCafes.map((c) => c.country))).sort((a, b) => a.localeCompare(b)),
+    [savedCafes],
+  );
+
+  // Mirrors MapPageClient's same guard for Price/Rating/Cuisine: if the one
+  // cafe an active filter matched gets removed/edited, its chip vanishes --
+  // without this the filter would silently keep matching nothing.
+  useEffect(() => {
+    if (countryFilter != null && !countryOptions.includes(countryFilter)) setCountryFilter(null);
+  }, [countryOptions, countryFilter]);
+
+  const visibleCafes = useMemo(
+    () => savedCafes.filter((c) => countryFilter == null || c.country === countryFilter),
+    [savedCafes, countryFilter],
   );
 
   const subtitle =
@@ -70,16 +91,33 @@ export function ListPageClient() {
             </Link>
           </div>
         ) : (
-          <div className="list-page-grid">
-            {savedCafes.map((shop) => (
-              <CafeCard
-                key={shop.id}
-                shop={shop}
-                variant="grid"
-                onMarkedTasted={() => router.push(`/map?cafe=${shop.slug}`)}
-              />
-            ))}
-          </div>
+          <>
+            {countryOptions.length > 1 && (
+              <div className="chips filter-chip-group" role="group" aria-label="Country">
+                <span className="filter-chip-group-label">Country</span>
+                {countryOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`chip${countryFilter === option ? " is-on" : ""}`}
+                    onClick={() => setCountryFilter((prev) => (prev === option ? null : option))}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="list-page-grid">
+              {visibleCafes.map((shop) => (
+                <CafeCard
+                  key={shop.id}
+                  shop={shop}
+                  variant="grid"
+                  onMarkedTasted={() => router.push(`/map?cafe=${shop.slug}`)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </main>
 

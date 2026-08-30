@@ -8,7 +8,7 @@ import { CafeStatusButton } from "@/components/status/CafeStatusButton";
 import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
 import { extractPlaceInfoFromGoogleMapsUrl, resolveGoogleMapsLink, reviewCountOf } from "@/lib/cafe-helpers";
 import { uploadPhoto } from "@/lib/upload-photo";
-import { isWithinSingapore } from "@/lib/geo";
+import { findMapCountry } from "@/lib/countries";
 
 type DrawerMode = "view" | "add" | "edit";
 
@@ -110,7 +110,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
   // something the user typed themselves, so re-pasting a corrected link can
   // overwrite a previous (wrong) auto-fill without ever clobbering a value
   // the user deliberately entered by hand.
-  const autoFilledFieldsRef = useRef<Set<"name" | "cuisine" | "address" | "lat" | "lng">>(new Set());
+  const autoFilledFieldsRef = useRef<Set<"name" | "cuisine" | "address" | "lat" | "lng" | "country">>(new Set());
   // Bumped on every extraction attempt so a slow (short-link) resolution
   // that's since been superseded by a newer paste can detect it's stale and
   // no-op instead of overwriting more recent data.
@@ -131,6 +131,10 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     setDishInput("");
     setNewReview({ author: "", text: "", rating: "" });
     autoFilledFieldsRef.current.clear();
+    // "Singapore" is a pre-filled default, not something the user typed --
+    // marking it auto-filled from the start lets a detected country (e.g.
+    // pasting a Tokyo link) overwrite it, exactly like an empty field would.
+    if (mode === "add") autoFilledFieldsRef.current.add("country");
     extractRequestIdRef.current += 1;
     if (mode === "view" && shop) {
       // Deliberately re-synced only when the drawer switches cafes/modes (or
@@ -250,7 +254,10 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
    * and a still-auto-filled one gets overwritten too (so re-pasting a
    * corrected link can fix a wrong guess), but a value the user actually
    * edited is never touched. */
-  function shouldAutoFill(field: "name" | "cuisine" | "address" | "lat" | "lng", currentValue: string): boolean {
+  function shouldAutoFill(
+    field: "name" | "cuisine" | "address" | "lat" | "lng" | "country",
+    currentValue: string,
+  ): boolean {
     return currentValue.trim() === "" || autoFilledFieldsRef.current.has(field);
   }
 
@@ -289,6 +296,10 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
         if (info.lng != null && shouldAutoFill("lng", f.lng)) {
           next.lng = String(info.lng);
           autoFilledFieldsRef.current.add("lng");
+        }
+        if (info.country && shouldAutoFill("country", f.country)) {
+          next.country = info.country;
+          autoFilledFieldsRef.current.add("country");
         }
         return next;
       });
@@ -397,12 +408,22 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
 
   const latNum = Number(form.lat);
   const lngNum = Number(form.lng);
+  // Only checked for a country that actually has bounds data (Singapore,
+  // Japan) -- any other free-text Country value has nothing to check
+  // coordinates against, so it's silently skipped rather than guessed at.
+  const formMapCountry = findMapCountry(form.country);
   const showOobWarning =
+    !!formMapCountry &&
     form.lat !== "" &&
     form.lng !== "" &&
     Number.isFinite(latNum) &&
     Number.isFinite(lngNum) &&
-    !isWithinSingapore(latNum, lngNum);
+    !(
+      latNum >= formMapCountry.bounds.minLat &&
+      latNum <= formMapCountry.bounds.maxLat &&
+      lngNum >= formMapCountry.bounds.minLng &&
+      lngNum <= formMapCountry.bounds.maxLng
+    );
 
   return (
     <aside className="cafe-drawer" role="complementary" aria-label={mode === "add" ? "Add a restaurant" : (shop?.name ?? "Cafe details")}>
@@ -628,7 +649,10 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
             <span>Country</span>
             <input
               value={form.country}
-              onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+              onChange={(e) => {
+                autoFilledFieldsRef.current.delete("country");
+                setForm((f) => ({ ...f, country: e.target.value }));
+              }}
               required
             />
           </label>
@@ -682,7 +706,7 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
               </div>
               {showOobWarning && (
                 <p className="cafe-drawer-warning">
-                  These coordinates look like they are outside Singapore -- double check the pin lands where you expect.
+                  These coordinates look like they are outside {form.country.trim()} -- double check the pin lands where you expect.
                 </p>
               )}
             </>

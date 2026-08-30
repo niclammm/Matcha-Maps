@@ -370,7 +370,10 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
     };
 
     if (mode === "add") {
-      const { shop: created, persisted } = addCafe(input);
+      // A newly added restaurant always lands on the Wish List -- there's no
+      // "add straight to Tasted" path, since you can't have tasted something
+      // you're only just now entering into the app.
+      const { shop: created, persisted } = addCafe(input, "wishlist");
       if (!persisted) {
         setWarning("Couldn't save this restaurant -- try again.");
       }

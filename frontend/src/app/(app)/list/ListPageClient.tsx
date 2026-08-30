@@ -9,11 +9,10 @@ import { Nav } from "@/components/layout/Nav";
 import { Topbar } from "@/components/layout/Topbar";
 import { useCafes } from "@/components/providers/CafesProvider";
 import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
-import type { MergedShop } from "@/lib/types";
 
 export function ListPageClient() {
   const router = useRouter();
-  const { savedSlugs, count, isSaved, toggleSave, hydrated: savedHydrated } = useSavedCafes();
+  const { savedSlugs, count, hydrated: savedHydrated } = useSavedCafes();
   const { cafes, hydrated: cafesHydrated } = useCafes();
   const hydrated = savedHydrated && cafesHydrated;
   const [addOpen, setAddOpen] = useState(false);
@@ -54,8 +53,9 @@ export function ListPageClient() {
         ? "1 cafe on your wish list"
         : `${count} cafes on your wish list`;
 
-  function handleAdded(shop: MergedShop) {
-    if (!isSaved(shop.slug)) toggleSave(shop.slug);
+  function handleAdded() {
+    // Wishlisting happens inside CafeDrawer itself (addCafe(input,
+    // "wishlist")) -- see CafesProvider.addCafe.
     setAddOpen(false);
   }
 

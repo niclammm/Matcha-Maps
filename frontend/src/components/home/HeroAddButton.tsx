@@ -4,7 +4,6 @@ import { useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { CafeDrawer } from "@/components/map/CafeDrawer";
-import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
 import type { MergedShop } from "@/lib/types";
 
 const ARC_TEXT = "NEW JOURNAL ENTRY · MATCHA MAPS SG ·";
@@ -16,12 +15,12 @@ const ARC_TEXT = "NEW JOURNAL ENTRY · MATCHA MAPS SG ·";
  * turns into... a bowl. */
 export function HeroAddButton() {
   const router = useRouter();
-  const { isSaved, toggleSave } = useSavedCafes();
   const [addOpen, setAddOpen] = useState(false);
   const arcId = useId();
 
   function handleAdded(shop: MergedShop) {
-    if (!isSaved(shop.slug)) toggleSave(shop.slug);
+    // Wishlisting happens inside CafeDrawer itself (addCafe(input,
+    // "wishlist")) -- see CafesProvider.addCafe.
     setAddOpen(false);
     router.push(`/map?cafe=${shop.slug}`);
   }

@@ -211,12 +211,9 @@ export default function MapPageClient() {
   }
 
   function handleSaved(shop: MergedShop) {
-    // A newly added restaurant always lands on the Wish List -- there's no
-    // "add straight to Tasted" path, since you can't have tasted something
-    // you're only just now entering into the app. Gated to "add" specifically
-    // since this same handler also fires on "edit" saves, and a Tasted cafe
-    // being edited must not get silently re-added to the Wish List too.
-    if (drawer?.mode === "add" && !isSaved(shop.slug)) toggleSave(shop.slug);
+    // Wishlisting a newly added restaurant is CafeDrawer's own job now
+    // (addCafe(input, "wishlist")) -- doing it here too used to race a
+    // stale `cafes` snapshot and silently no-op. See CafesProvider.addCafe.
     setSelectedSlug(shop.slug);
     setDrawer({ mode: "view", slug: shop.slug });
   }

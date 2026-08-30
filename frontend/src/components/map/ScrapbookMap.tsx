@@ -5,6 +5,7 @@ import * as d3 from "d3";
 import type { MergedShop } from "@/lib/types";
 import { WishListMark } from "@/components/brand/WishListMark";
 import { TastedMark } from "@/components/brand/TastedMark";
+import { findMapCountry } from "@/lib/countries";
 
 type GeoFeature = {
   type: "Feature";
@@ -12,16 +13,7 @@ type GeoFeature = {
   geometry: GeoJSON.Geometry;
 };
 type GeoFC = { type: "FeatureCollection"; features: GeoFeature[] };
-type Geo = { sg: GeoFeature; neighbours: GeoFeature[] };
-
-/** District labels placed by hand, away from the pin cluster. */
-const AREA_LABELS: { name: string; lat: number; lng: number; anchor?: "start" | "middle" | "end" }[] = [
-  { name: "Jurong East", lat: 1.3405, lng: 103.7436 },
-  { name: "Orchard", lat: 1.326, lng: 103.8318 },
-  { name: "Bugis", lat: 1.313, lng: 103.875, anchor: "start" },
-  { name: "Tiong Bahru", lat: 1.2735, lng: 103.825, anchor: "end" },
-  { name: "Chinatown", lat: 1.2745, lng: 103.85, anchor: "start" },
-];
+type Geo = { target: GeoFeature; neighbours: GeoFeature[] };
 
 type PreviewState = { cafe: MergedShop; left: number; top: number };
 
@@ -44,6 +36,9 @@ type ScrapbookMapProps = {
   /** Which personal list is currently shown -- recolors pins/leader-dots
    * matcha green vs. tasted gold to match. */
   bucket: "wishlist" | "tasted";
+  /** Which country's outline/pins to draw -- must match a MAP_COUNTRIES
+   * entry in @/lib/countries for the map to actually render anything. */
+  country: string;
 };
 
 export function ScrapbookMap({
@@ -55,6 +50,7 @@ export function ScrapbookMap({
   onQueryChange,
   filterGroups = [],
   bucket,
+  country,
 }: ScrapbookMapProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -67,20 +63,37 @@ export function ScrapbookMap({
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/singapore-geo.json")
+    setGeo(null);
+    setLoadError(false);
+
+    const mapCountry = findMapCountry(country);
+    if (!mapCountry) {
+      setLoadError(true);
+      return;
+    }
+
+    const targetName = country.trim().toLowerCase();
+    fetch(mapCountry.geoFile)
       .then((r) => r.json())
       .then((fc: GeoFC) => {
         if (cancelled) return;
-        const sg = fc.features.find((f) => f.properties.name === "Singapore");
-        const neighbours = fc.features.filter((f) => f.properties.name !== "Singapore");
-        if (!sg) throw new Error("Singapore feature missing from singapore-geo.json");
-        setGeo({ sg, neighbours });
+        const target = fc.features.find((f) => f.properties.name.toLowerCase() === targetName);
+        const neighbours = fc.features.filter((f) => f.properties.name.toLowerCase() !== targetName);
+        if (!target) throw new Error(`${country} feature missing from ${mapCountry.geoFile}`);
+        setGeo({ target, neighbours });
       })
-      .catch(() => setLoadError(true));
+      .catch(() => {
+        // A rejection/throw from an already-abandoned country switch (e.g.
+        // Singapore's fetch failing late after the user already switched to
+        // Japan, whose fetch already succeeded) must not flip the error
+        // overlay on over a map that's already loaded correctly.
+        if (cancelled) return;
+        setLoadError(true);
+      });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [country]);
 
   const draw = useCallback(() => {
     const stage = stageRef.current;
@@ -95,7 +108,7 @@ export function ScrapbookMap({
         [w * 0.06, h * 0.14],
         [w * 0.94, h * 0.86],
       ],
-      geo.sg as unknown as d3.GeoPermissibleObjects,
+      geo.target as unknown as d3.GeoPermissibleObjects,
     );
     projectionRef.current = projection;
     const path = d3.geoPath(projection);
@@ -124,30 +137,30 @@ export function ScrapbookMap({
       .attr("stroke-width", 1)
       .attr("stroke-dasharray", "3 4");
 
-    // Singapore: the silhouette, cut out of cream paper
-    const sgLayer = svg.append("g");
-    sgLayer
+    // the target country's silhouette, cut out of cream paper
+    const targetLayer = svg.append("g");
+    targetLayer
       .append("path")
-      .attr("d", path(geo.sg.geometry as unknown as d3.GeoPermissibleObjects))
+      .attr("d", path(geo.target.geometry as unknown as d3.GeoPermissibleObjects))
       .attr("fill", "none")
       .attr("stroke", "rgba(107,88,72,.16)")
       .attr("stroke-width", 9)
       .attr("stroke-linejoin", "round");
-    sgLayer
+    targetLayer
       .append("path")
-      .attr("d", path(geo.sg.geometry as unknown as d3.GeoPermissibleObjects))
+      .attr("d", path(geo.target.geometry as unknown as d3.GeoPermissibleObjects))
       .attr("fill", "var(--off-white)")
       .attr("stroke", "var(--matcha-dark)")
       .attr("stroke-width", 1.6)
       .attr("stroke-linejoin", "round");
 
-    // sparse dot grid inside the island — the scrapbook texture, no streets
+    // sparse dot grid inside the island(s) — the scrapbook texture, no streets
     const dots = svg.append("g").attr("fill", "rgba(162,142,122,.4)");
     const step = 13;
     for (let x = 0; x < w; x += step) {
       for (let y = 0; y < h; y += step) {
         const ll = projection.invert?.([x, y]);
-        if (ll && d3.geoContains(geo.sg.geometry as unknown as d3.GeoPermissibleObjects, ll)) {
+        if (ll && d3.geoContains(geo.target.geometry as unknown as d3.GeoPermissibleObjects, ll)) {
           dots.append("circle").attr("cx", x).attr("cy", y).attr("r", 1.2);
         }
       }
@@ -179,7 +192,7 @@ export function ScrapbookMap({
       .text("N");
 
     // ---- pins: nudge each pill clear of its neighbours, alternating up/down ----
-    const centroidPx = projection(d3.geoCentroid(geo.sg.geometry as unknown as d3.GeoPermissibleObjects));
+    const centroidPx = projection(d3.geoCentroid(geo.target.geometry as unknown as d3.GeoPermissibleObjects));
     type PinNode = { slug: string; el: HTMLButtonElement; x: number; y: number; tx: number; ty: number; w: number; h: number };
     const nodes: PinNode[] = [];
     for (const cafe of cafes) {
@@ -248,7 +261,8 @@ export function ScrapbookMap({
 
     // ---- area labels: any that would sit under a pin is nudged clear, or dropped ----
     const boxes = pinRects.slice();
-    AREA_LABELS.forEach((l) => {
+    const areaLabels = findMapCountry(country)?.areaLabels ?? [];
+    areaLabels.forEach((l) => {
       const projected = projection([l.lng, l.lat]);
       if (!projected) return;
       const [px, py] = projected;
@@ -299,7 +313,7 @@ export function ScrapbookMap({
         .attr("letter-spacing", ".16em")
         .text(l.name.toUpperCase());
     });
-  }, [geo, cafes, bucket]);
+  }, [geo, cafes, bucket, country]);
 
   useEffect(() => {
     if (!geo || !stageRef.current) return;
@@ -343,7 +357,7 @@ export function ScrapbookMap({
       <span className="washi-tape washi-tape--blue" aria-hidden="true" />
 
       <div className="paper-header">
-        <span className="paper-title">Singapore</span>
+        <span className="paper-title">{country}</span>
         <span className="paper-sub">tasted &amp; mapped</span>
         <label className="map-search">
           <span aria-hidden="true">⌕</span>
@@ -379,7 +393,7 @@ export function ScrapbookMap({
       ))}
 
       <div className="map-stage" ref={stageRef}>
-        <svg ref={svgRef} className="map-svg" aria-label="Map of Singapore with matcha cafes" />
+        <svg ref={svgRef} className="map-svg" aria-label={`Map of ${country} with matcha cafes`} />
 
         {!geo && !loadError && <div className="map-stage-loading">sketching the island…</div>}
         {loadError && <div className="map-stage-loading">map failed to load</div>}

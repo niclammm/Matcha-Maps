@@ -16,7 +16,10 @@ type CafesContextValue = {
   syncError: string | null;
   dismissSyncError: () => void;
   getBySlug: (slug: string) => MergedShop | undefined;
-  addCafe: (input: NewCafeInput) => { shop: MergedShop; persisted: boolean };
+  addCafe: (
+    input: NewCafeInput,
+    initialStatus?: "wishlist" | "tasted" | null,
+  ) => { shop: MergedShop; persisted: boolean };
   updateCafe: (slug: string, patch: CafePatch) => { updated: boolean; persisted: boolean };
   removeCafe: (slug: string) => void;
 };
@@ -50,7 +53,7 @@ export function CafesProvider({ children, initialCafes }: { children: ReactNode;
   // click and it actually being saved.
 
   const addCafe = useCallback(
-    (input: NewCafeInput): { shop: MergedShop; persisted: boolean } => {
+    (input: NewCafeInput, initialStatus: "wishlist" | "tasted" | null = null): { shop: MergedShop; persisted: boolean } => {
       const slug = uniqueSlug(
         input.name,
         cafes.map((c) => c.slug),
@@ -60,7 +63,7 @@ export function CafesProvider({ children, initialCafes }: { children: ReactNode;
         id: generateId(),
         slug,
         reviewCount: input.reviewCount ?? input.reviews?.length ?? 0,
-        status: null,
+        status: initialStatus,
         tastedRating: null,
         tastedComment: "",
         tastedPhotos: [],
@@ -74,7 +77,23 @@ export function CafesProvider({ children, initialCafes }: { children: ReactNode;
       })
         .then(async (res) => {
           if (!res.ok) throw new Error("save failed");
-          const saved: MergedShop = await res.json();
+          let saved: MergedShop = await res.json();
+          // Creation and status are separate concerns server-side (POST
+          // never accepts a status), so a requested initial status is set
+          // via a follow-up PATCH here rather than by the caller trying to
+          // call updateCafe/toggleSave itself right after addCafe returns --
+          // that used to look up the new cafe in `cafes`, which still
+          // reflected the pre-add snapshot from the same render (setCafes
+          // above doesn't re-render synchronously), so the lookup silently
+          // failed and the cafe was never actually wishlisted.
+          if (initialStatus) {
+            const patchRes = await fetch(`/api/cafes/${saved.slug}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: initialStatus }),
+            }).catch(() => null);
+            if (patchRes?.ok) saved = await patchRes.json();
+          }
           setCafes((prev) => prev.map((c) => (c.slug === slug ? saved : c)));
         })
         .catch(() => {

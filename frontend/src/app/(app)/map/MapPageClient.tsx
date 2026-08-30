@@ -12,6 +12,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { useCafes } from "@/components/providers/CafesProvider";
 import { useSavedCafes } from "@/components/providers/SavedCafesProvider";
 import { useTriedCafes } from "@/components/providers/TriedCafesProvider";
+import { MAP_COUNTRIES } from "@/lib/countries";
 import type { MergedShop } from "@/lib/types";
 
 type DrawerState = { mode: "view" | "add" | "edit"; slug: string | null };
@@ -50,6 +51,7 @@ export default function MapPageClient() {
   }, [searchParams, hydrated]);
 
   const [bucket, setBucket] = useState<Bucket>("wishlist");
+  const [country, setCountry] = useState<string>(MAP_COUNTRIES[0].name);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(initialSlug);
   const [drawer, setDrawer] = useState<DrawerState | null>(
     initialSlug ? { mode: "view", slug: initialSlug } : null,
@@ -76,13 +78,14 @@ export default function MapPageClient() {
   const sortedCafes = useMemo(
     () =>
       bucketCafes
-        // The illustrated map only knows Singapore's shape -- restaurants
-        // logged from anywhere else stay list-only (Wish List/Tasted pages)
-        // until real multi-country map support exists. Case/whitespace
-        // normalized since Country is free text, not a fixed list.
-        .filter((c) => c.country.trim().toLowerCase() === "singapore")
+        // The illustrated map only knows the selected country's shape --
+        // restaurants logged from anywhere else stay list-only (Wish
+        // List/Tasted pages) until they get their own map entry too.
+        // Case/whitespace normalized since Country is free text, not a
+        // fixed list.
+        .filter((c) => c.country.trim().toLowerCase() === country.trim().toLowerCase())
         .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || (b.rating ?? 0) - (a.rating ?? 0)),
-    [bucketCafes],
+    [bucketCafes, country],
   );
 
   const visibleSlugs = useMemo(() => {
@@ -208,12 +211,9 @@ export default function MapPageClient() {
   }
 
   function handleSaved(shop: MergedShop) {
-    // A newly added restaurant always lands on the Wish List -- there's no
-    // "add straight to Tasted" path, since you can't have tasted something
-    // you're only just now entering into the app. Gated to "add" specifically
-    // since this same handler also fires on "edit" saves, and a Tasted cafe
-    // being edited must not get silently re-added to the Wish List too.
-    if (drawer?.mode === "add" && !isSaved(shop.slug)) toggleSave(shop.slug);
+    // Wishlisting a newly added restaurant is CafeDrawer's own job now
+    // (addCafe(input, "wishlist")) -- doing it here too used to race a
+    // stale `cafes` snapshot and silently no-op. See CafesProvider.addCafe.
     setSelectedSlug(shop.slug);
     setDrawer({ mode: "view", slug: shop.slug });
   }
@@ -225,6 +225,14 @@ export default function MapPageClient() {
 
   function switchBucket(next: Bucket) {
     setBucket(next);
+    setQuery("");
+    setPriceFilter(null);
+    setRatingFilter(null);
+    setCuisineFilter(null);
+  }
+
+  function switchCountry(next: string) {
+    setCountry(next);
     setQuery("");
     setPriceFilter(null);
     setRatingFilter(null);
@@ -260,31 +268,45 @@ export default function MapPageClient() {
                 </>
               )}
             </div>
-            <div className="bucket-tabs">
-              <button
-                type="button"
-                className={`bucket-tab${bucket === "wishlist" ? " is-on" : " is-off"}`}
-                aria-pressed={bucket === "wishlist"}
-                onClick={() => switchBucket("wishlist")}
-              >
-                <WishListMark size={52} animated={bucket === "wishlist"} decorative className="bucket-tab-mark" />
-                <span className="bucket-tab-copy">
-                  <span className="bucket-tab-label">Wish List</span>
-                  <span className="bucket-tab-meta">{savedSlugs.length} to go</span>
-                </span>
-              </button>
-              <button
-                type="button"
-                className={`bucket-tab${bucket === "tasted" ? " is-on" : " is-off"}`}
-                aria-pressed={bucket === "tasted"}
-                onClick={() => switchBucket("tasted")}
-              >
-                <TastedMark size={34} animated={bucket === "tasted"} decorative className="bucket-tab-mark" />
-                <span className="bucket-tab-copy">
-                  <span className="bucket-tab-label">Tasted</span>
-                  <span className="bucket-tab-meta">{triedSlugs.length} logged</span>
-                </span>
-              </button>
+            <div className="map-head-selectors">
+              <div className="chips country-tabs" role="group" aria-label="Country">
+                {MAP_COUNTRIES.map((c) => (
+                  <button
+                    key={c.name}
+                    type="button"
+                    className={`chip${country === c.name ? " is-on" : ""}`}
+                    onClick={() => switchCountry(c.name)}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+              <div className="bucket-tabs">
+                <button
+                  type="button"
+                  className={`bucket-tab${bucket === "wishlist" ? " is-on" : " is-off"}`}
+                  aria-pressed={bucket === "wishlist"}
+                  onClick={() => switchBucket("wishlist")}
+                >
+                  <WishListMark size={52} animated={bucket === "wishlist"} decorative className="bucket-tab-mark" />
+                  <span className="bucket-tab-copy">
+                    <span className="bucket-tab-label">Wish List</span>
+                    <span className="bucket-tab-meta">{savedSlugs.length} to go</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={`bucket-tab${bucket === "tasted" ? " is-on" : " is-off"}`}
+                  aria-pressed={bucket === "tasted"}
+                  onClick={() => switchBucket("tasted")}
+                >
+                  <TastedMark size={34} animated={bucket === "tasted"} decorative className="bucket-tab-mark" />
+                  <span className="bucket-tab-copy">
+                    <span className="bucket-tab-label">Tasted</span>
+                    <span className="bucket-tab-meta">{triedSlugs.length} logged</span>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -298,6 +320,7 @@ export default function MapPageClient() {
               onQueryChange={setQuery}
               filterGroups={filterGroups}
               bucket={bucket}
+              country={country}
             />
 
             <aside className="rail">
@@ -314,14 +337,14 @@ export default function MapPageClient() {
                 <div className="rail-empty">
                   <p className="rail-empty-title">
                     {bucketCafes.length > 0
-                      ? "No Singapore spots here yet."
+                      ? `No ${country} spots here yet.`
                       : bucket === "wishlist"
                         ? "Your wish list is empty."
                         : "You haven't tasted any cafes yet."}
                   </p>
                   <p className="rail-empty-body">
                     {bucketCafes.length > 0
-                      ? `The map only shows Singapore restaurants -- everything else on your ${bucketLabel} is on its page instead.`
+                      ? `The map only shows ${country} restaurants -- everything else on your ${bucketLabel} is on its page instead.`
                       : bucket === "wishlist"
                         ? "Open a cafe and tap the glass icon to add it to your wish list."
                         : "Open a cafe and mark it tasted once you've tried it."}

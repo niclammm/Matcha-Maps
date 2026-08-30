@@ -1976,6 +1976,18 @@ a.btn {
 
 /* ---------- Bucket tabs (Wish List / Tasted, taped-paper tabs) ---------- */
 
+.map-head-selectors {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex: none;
+}
+
+.country-tabs {
+  flex: none;
+}
+
 .bucket-tabs {
   display: flex;
   align-items: flex-end;

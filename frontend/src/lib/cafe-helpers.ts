@@ -1,4 +1,5 @@
 import type { Shop } from "@/lib/types";
+import { detectCountryFromAddress, detectCountryFromCoords } from "@/lib/countries";
 
 /** New cafes derive their displayed review count from actual review entries;
  * seed cafes keep their hand-authored aggregate count untouched. */
@@ -64,6 +65,7 @@ export type ExtractedPlaceInfo = {
   lng: number | null;
   address: string | null;
   cuisine: string | null;
+  country: string | null;
 };
 
 /** Google's `_restaurant`/`_cafe`/etc. category slugs, humanized into a
@@ -146,7 +148,13 @@ export function extractPlaceInfoFromGoogleMapsUrl(url: string): ExtractedPlaceIn
     }
   }
 
-  return { name, lat, lng, address, cuisine: extractCuisineFromDataBlob(url) };
+  // The two URL forms are mutually exclusive in what they carry: the
+  // `/place/.../@lat,lng` form never has address text, and the `?q=` form
+  // never has coordinates -- so exactly one of these two signals is ever
+  // available per link, not both.
+  const country = lat != null && lng != null ? detectCountryFromCoords(lat, lng) : address ? detectCountryFromAddress(address) : null;
+
+  return { name, lat, lng, address, cuisine: extractCuisineFromDataBlob(url), country };
 }
 
 /** Reads an image File, downscales it to `maxDim` on its longest side via

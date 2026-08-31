@@ -17,11 +17,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Image is too large" }, { status: 413 });
   }
 
-  const pathname = `matcha-maps/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const blob = await put(pathname, file, {
-    access: "public",
-    contentType: "image/jpeg",
-  });
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    console.error("Upload failed: BLOB_READ_WRITE_TOKEN is not set");
+    return NextResponse.json({ error: "Photo storage isn't configured on this deployment yet" }, { status: 500 });
+  }
 
-  return NextResponse.json({ url: blob.url });
+  const pathname = `matcha-maps/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+  try {
+    const blob = await put(pathname, file, {
+      access: "public",
+      contentType: "image/jpeg",
+    });
+    return NextResponse.json({ url: blob.url });
+  } catch (err) {
+    // Logged server-side (Vercel function logs) with the real cause --
+    // e.g. an invalid/expired token, or a store that's since been deleted --
+    // rather than surfacing as an opaque 500 with no way to diagnose it.
+    console.error("Vercel Blob upload failed:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: `Upload failed: ${message}` }, { status: 502 });
+  }
 }

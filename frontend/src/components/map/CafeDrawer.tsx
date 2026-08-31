@@ -749,81 +749,81 @@ export function CafeDrawer({ mode, shop, onClose, onRequestEdit, onSaved, onRemo
             />
           </label>
 
+          <label className="cafe-drawer-field">
+            <span>Rating (optional)</span>
+            <input
+              type="number"
+              min={0}
+              max={5}
+              step={0.1}
+              placeholder="Not yet rated"
+              value={form.rating}
+              onChange={(e) => setForm((f) => ({ ...f, rating: e.target.value }))}
+            />
+          </label>
+
+          <label className="cafe-drawer-field">
+            <span>Signature dish or drink</span>
+            <input
+              value={form.signatureDrink}
+              onChange={(e) => setForm((f) => ({ ...f, signatureDrink: e.target.value }))}
+            />
+          </label>
+
+          <div className="cafe-drawer-field">
+            <span>Popular dishes</span>
+            <div className="cafe-drawer-tag-input">
+              <input
+                value={dishInput}
+                onChange={(e) => setDishInput(e.target.value)}
+                onKeyDown={handleDishKeyDown}
+                placeholder="e.g. Matcha tiramisu"
+              />
+              <button type="button" onClick={addDish}>
+                Add
+              </button>
+            </div>
+            {form.popularDishes.length > 0 && (
+              <div className="flavor-tags">
+                {form.popularDishes.map((dish, i) => (
+                  <span key={`${dish}-${i}`} className="flavor-tag cafe-drawer-removable-tag">
+                    {dish}
+                    <button type="button" onClick={() => removeDish(i)} aria-label={`Remove ${dish}`}>
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="cafe-drawer-field">
+            <span>Photos</span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotosSelected}
+              disabled={uploadingPhotos}
+            />
+            {uploadingPhotos && <span className="cafe-drawer-extracting">Uploading…</span>}
+            {form.photos.length > 0 && (
+              <div className="cafe-drawer-photo-thumbs">
+                {form.photos.map((src, i) => (
+                  <div key={i} className="cafe-drawer-photo-thumb">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" />
+                    <button type="button" onClick={() => removePhoto(i)} aria-label="Remove photo">
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {mode === "edit" && (
             <>
-              <label className="cafe-drawer-field">
-                <span>Rating (optional)</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={5}
-                  step={0.1}
-                  placeholder="Not yet rated"
-                  value={form.rating}
-                  onChange={(e) => setForm((f) => ({ ...f, rating: e.target.value }))}
-                />
-              </label>
-
-              <label className="cafe-drawer-field">
-                <span>Signature dish or drink</span>
-                <input
-                  value={form.signatureDrink}
-                  onChange={(e) => setForm((f) => ({ ...f, signatureDrink: e.target.value }))}
-                />
-              </label>
-
-              <div className="cafe-drawer-field">
-                <span>Popular dishes</span>
-                <div className="cafe-drawer-tag-input">
-                  <input
-                    value={dishInput}
-                    onChange={(e) => setDishInput(e.target.value)}
-                    onKeyDown={handleDishKeyDown}
-                    placeholder="e.g. Matcha tiramisu"
-                  />
-                  <button type="button" onClick={addDish}>
-                    Add
-                  </button>
-                </div>
-                {form.popularDishes.length > 0 && (
-                  <div className="flavor-tags">
-                    {form.popularDishes.map((dish, i) => (
-                      <span key={`${dish}-${i}`} className="flavor-tag cafe-drawer-removable-tag">
-                        {dish}
-                        <button type="button" onClick={() => removeDish(i)} aria-label={`Remove ${dish}`}>
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="cafe-drawer-field">
-                <span>Photos</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePhotosSelected}
-                  disabled={uploadingPhotos}
-                />
-                {uploadingPhotos && <span className="cafe-drawer-extracting">Uploading…</span>}
-                {form.photos.length > 0 && (
-                  <div className="cafe-drawer-photo-thumbs">
-                    {form.photos.map((src, i) => (
-                      <div key={i} className="cafe-drawer-photo-thumb">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt="" />
-                        <button type="button" onClick={() => removePhoto(i)} aria-label="Remove photo">
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               <div className="cafe-drawer-field">
                 <span>Reviews</span>
                 {form.reviews.map((r) => (

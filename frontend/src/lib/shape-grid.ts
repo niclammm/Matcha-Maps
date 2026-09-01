@@ -92,6 +92,7 @@ export class ShapeGrid {
   private reducedMotion: boolean;
   private gridOffset = { x: 0, y: 0 };
   private hoveredCell: GridCell | null = null;
+  private pointerPosition: GridCell | null = null;
   private trailCells: GridCell[] = [];
   private cellOpacities = new Map<string, number>();
   private time = 0;
@@ -157,8 +158,17 @@ export class ShapeGrid {
 
   private handleMouseMove(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    this.pointerPosition = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+    this.updateHoveredCell();
+  }
+
+  private updateHoveredCell() {
+    if (!this.pointerPosition) return;
+    const mx = this.pointerPosition.x;
+    const my = this.pointerPosition.y;
     const s = this.squareSize;
     const offsetX = ((this.gridOffset.x % s) + s) % s;
     const offsetY = ((this.gridOffset.y % s) + s) % s;
@@ -175,6 +185,7 @@ export class ShapeGrid {
       }
     }
     this.hoveredCell = null;
+    this.pointerPosition = null;
   }
 
   private updateOpacities() {
@@ -224,6 +235,7 @@ export class ShapeGrid {
       }
       this.time += 0.016;
     }
+    this.updateHoveredCell();
     this.updateOpacities();
     this.draw();
     this.raf = requestAnimationFrame(this.tick);

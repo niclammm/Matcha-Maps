@@ -281,6 +281,7 @@ a.btn {
 }
 .btn-primary:hover {
   background: var(--accent-hover);
+  color: var(--btn-text);
   transform: translateY(-1px);
   box-shadow: 0 8px 20px rgba(120, 155, 98, 0.28);
 }
@@ -703,6 +704,8 @@ a.btn {
 
 .map-page {
   min-height: calc(100vh - 57px);
+  display: flex;
+  flex-direction: column;
 }
 
 .map-frame {
@@ -882,6 +885,7 @@ a.btn {
 .hero-home {
   position: relative;
   z-index: 2;
+  pointer-events: none;
   display: grid;
   grid-template-columns: 1fr;
   grid-template-areas:
@@ -1799,6 +1803,9 @@ a.btn {
   margin: 0 clamp(12px, 2vw, 24px) 16px;
   border-bottom: 1px solid var(--border-soft);
   flex-wrap: wrap;
+  flex: none;
+  position: relative;
+  z-index: 4;
 }
 
 .map-head h1 {
@@ -1829,6 +1836,7 @@ a.btn {
   grid-template-columns: minmax(0, 1fr) 372px;
   gap: 20px;
   align-items: start;
+  flex: 1;
 }
 
 /* scrapbook paper the map is pasted onto */
@@ -1846,6 +1854,7 @@ a.btn {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
   transform: rotate(-0.3deg);
 }
 
@@ -1984,8 +1993,110 @@ a.btn {
   flex: none;
 }
 
-.country-tabs {
-  flex: none;
+.country-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 13px;
+  background: var(--off-white);
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  color: var(--brown-light);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.country-select-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  min-height: 24px;
+  padding: 2px 20px 2px 9px;
+  background: var(--matcha);
+  border-radius: 999px;
+  color: var(--off-white);
+  text-transform: none;
+  overflow: visible;
+}
+
+.country-select-pill::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--off-white);
+  border-bottom: 1.5px solid var(--off-white);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+
+.country-select-mark {
+  font-size: 13px;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
+.country-select-trigger {
+  appearance: none;
+  width: max-content;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--off-white);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.country-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: auto;
+  z-index: 12;
+  min-width: 100%;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--off-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.country-select-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--matcha-dark);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.country-select-menu button:hover,
+.country-select-menu button.is-selected {
+  background: rgba(79, 107, 67, 0.12);
 }
 
 .bucket-tabs {
@@ -2103,9 +2214,15 @@ a.btn {
   position: relative;
   flex: 1;
   min-height: 380px;
+  background: rgba(224, 235, 238, 0.42);
   border: 1px dashed var(--border);
   border-radius: 10px;
   overflow: hidden;
+}
+
+.map-zoom-surface {
+  position: absolute;
+  inset: 0;
 }
 
 .map-svg {
@@ -2152,44 +2269,17 @@ a.btn {
 .pin-disc {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 6px 11px;
-  border-radius: 999px;
+  justify-content: center;
+  width: 50px;
+  height: 44px;
+  padding: 5px;
+  border-radius: 48% 52% 50% 46%;
   background: var(--off-white);
   border: 1.5px solid var(--matcha);
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--matcha-dark);
-  white-space: nowrap;
-  box-shadow: 0 5px 14px rgba(107, 88, 72, 0.24);
-  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
-
-.pin-rating {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding-left: 8px;
-  border-left: 1px solid var(--border-soft);
-  font-size: 12px;
-  color: var(--warm-brown);
-}
-
-.pin-rating .star {
-  color: var(--gold);
-  font-size: 10.5px;
-}
-
-.pin:hover .pin-rating,
-.pin.is-selected .pin-rating {
-  border-left-color: rgba(250, 249, 244, 0.4);
-  color: rgba(250, 249, 244, 0.92);
-}
-
-.pin:hover .pin-rating .star,
-.pin.is-selected .pin-rating .star {
-  color: var(--honey);
+  box-shadow: 0 4px 12px rgba(107, 88, 72, 0.2);
+  transform: rotate(-2deg);
+  transform-origin: bottom center;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
 .pin-tip {
@@ -2205,9 +2295,8 @@ a.btn {
 }
 
 .pin:hover .pin-disc {
-  transform: translateY(-3px) scale(1.06);
-  background: var(--matcha);
-  color: var(--off-white);
+  transform: translateY(-3px) rotate(1deg) scale(1.08);
+  box-shadow: 0 8px 18px rgba(107, 88, 72, 0.25);
 }
 
 .pin.is-selected {
@@ -2215,10 +2304,9 @@ a.btn {
 }
 
 .pin.is-selected .pin-disc {
-  background: var(--matcha-dark);
   border-color: var(--matcha-dark);
-  color: var(--off-white);
-  transform: scale(1.06);
+  transform: rotate(1deg) scale(1.1);
+  box-shadow: 0 0 0 3px rgba(120, 155, 98, 0.18), 0 8px 18px rgba(107, 88, 72, 0.24);
 }
 
 .pin.is-selected .pin-tip {
@@ -2229,49 +2317,25 @@ a.btn {
   opacity: 0.22;
 }
 
-.pin-name {
-  position: absolute;
-  top: -22px;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--brown-light);
-  opacity: 0;
-  transition: opacity 0.18s ease;
-  pointer-events: none;
-}
-
-.pin:hover .pin-name {
-  opacity: 1;
-}
-
-/* Tasted-bucket pin theming: matcha green -> honey/gold */
-.map-paper--tasted .pin-disc {
+/* Per-pin tasted theming: honey/gold sticker, used in mixed and tasted-only views */
+.pin--tasted .pin-disc {
   border-color: var(--tasted-gold);
-  color: var(--tasted-gold-text);
 }
 
-.map-paper--tasted .pin-tip {
+.pin--tasted .pin-tip {
   border-top-color: var(--tasted-gold);
 }
 
-.map-paper--tasted .pin-rating .star {
-  color: var(--tasted-gold-text);
-}
-
-.map-paper--tasted .pin:hover .pin-disc {
-  background: var(--tasted-gold);
-  border-color: var(--tasted-gold);
-}
-
-.map-paper--tasted .pin.is-selected .pin-disc {
-  background: var(--tasted-gold-text);
+.pin--tasted:hover .pin-disc {
   border-color: var(--tasted-gold-text);
 }
 
-.map-paper--tasted .pin.is-selected .pin-tip {
+.pin--tasted.is-selected .pin-disc {
+  border-color: var(--tasted-gold-text);
+  box-shadow: 0 0 0 3px rgba(224, 178, 84, 0.2), 0 8px 18px rgba(107, 88, 72, 0.24);
+}
+
+.pin--tasted.is-selected .pin-tip {
   border-top-color: var(--tasted-gold-text);
 }
 
@@ -2291,6 +2355,46 @@ a.btn {
   font-weight: 500;
   color: var(--warm-brown);
   pointer-events: none;
+}
+
+.map-zoom-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(250, 249, 244, 0.94);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+}
+
+.map-zoom-control {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 9px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--warm-brown);
+  font: 600 15px/1 var(--font-body), sans-serif;
+  cursor: pointer;
+}
+
+.map-zoom-control:hover {
+  background: var(--matcha-pale);
+  color: var(--matcha-dark);
+}
+
+.map-zoom-reset {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* hover preview */
@@ -2374,6 +2478,10 @@ a.btn {
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  max-height: calc(100vh - 220px);
+  overflow: hidden;
+  position: sticky;
+  top: 12px;
 }
 
 .rail-head {
@@ -2507,6 +2615,7 @@ a.btn {
 
 .cafe-card-rail-body {
   min-width: 0;
+  padding-right: 42px;
 }
 
 .cafe-card-rail-top {
@@ -2558,7 +2667,7 @@ a.btn {
 
 .cafe-card-rail-save {
   position: absolute;
-  top: 10px;
+  top: 8px;
   right: 10px;
 }
 

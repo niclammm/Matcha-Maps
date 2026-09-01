@@ -3,6 +3,8 @@ export type AreaLabel = { name: string; lat: number; lng: number; anchor?: "star
 export type MapCountry = {
   /** Matches `Shop.country` free text, case-insensitively. */
   name: string;
+  /** Small food mark shown in the country selector. */
+  mark: string;
   /** Static GeoJSON asset under public/, generated via
    * scripts/generate-country-geo.mjs. */
   geoFile: string;
@@ -20,6 +22,7 @@ export type MapCountry = {
 export const MAP_COUNTRIES: MapCountry[] = [
   {
     name: "Singapore",
+    mark: "🦀",
     geoFile: "/singapore-geo.json",
     // Mainland Singapore with margin (Woodlands->Sentosa, Tuas->Changi), so
     // every realistic cafe address is treated as valid.
@@ -34,6 +37,7 @@ export const MAP_COUNTRIES: MapCountry[] = [
   },
   {
     name: "Japan",
+    mark: "🍡",
     geoFile: "/japan-geo.json",
     // Okinawa to Hokkaido, with margin -- Japan's own span is far wider
     // than Singapore's, hence the much looser box.
